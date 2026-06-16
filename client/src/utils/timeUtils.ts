@@ -41,6 +41,14 @@ export function formatDriveTime(driveMinutes?: number | null): string {
   return `${driveMinutes} min`;
 }
 
+export function formatTravelTime(minutes: number | null | undefined, mode: "drive" | "walk"): string {
+  if (minutes === null || minutes === undefined) {
+    return mode === "walk" ? "Walk unavailable" : "Drive unavailable";
+  }
+
+  return `${minutes} min`;
+}
+
 export function categoryLabel(type: Place["type"]): string {
   if (type === "bar") {
     return "Bar";

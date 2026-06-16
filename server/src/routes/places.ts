@@ -25,11 +25,12 @@ interface CleanPlace {
   phone: string | null;
   type: Amenity;
   tags: Record<string, string>;
+  isHappyHour: boolean;
 }
 
 const router = Router();
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
-const OSRM_TABLE_URL = "https://router.project-osrm.org/table/v1/driving";
+const OSRM_BASE_URL = "https://router.project-osrm.org/table/v1";
 const MAX_RESULTS = 40;
 const DETAIL_TAG_KEYS = [
   "cuisine",
@@ -64,7 +65,7 @@ router.get("/", async (request, response) => {
       .filter((place) => (parsed.value.type === "late-night" ? place.closingMinutes >= minutesUntilMidnight() : true))
       .sort((a, b) => a.distanceKm - b.distanceKm)
       .slice(0, MAX_RESULTS);
-    const placesWithDriveTimes = await attachDriveTimes(places, parsed.value.userLat, parsed.value.userLng);
+    const placesWithDriveTimes = await attachDriveTimes(places, parsed.value.userLat, parsed.value.userLng, parsed.value.mode);
 
     response.json({ places: placesWithDriveTimes });
   } catch (error) {
@@ -74,7 +75,7 @@ router.get("/", async (request, response) => {
 });
 
 function parseQuery(query: Record<string, unknown>):
-  | { ok: true; value: { north: number; south: number; east: number; west: number; type: PlaceType; userLat: number; userLng: number } }
+  | { ok: true; value: { north: number; south: number; east: number; west: number; type: PlaceType; userLat: number; userLng: number; mode: "drive" | "walk" } }
   | { ok: false; error: string } {
   const north = Number(query.north);
   const south = Number(query.south);
@@ -83,6 +84,7 @@ function parseQuery(query: Record<string, unknown>):
   const userLat = Number(query.userLat);
   const userLng = Number(query.userLng);
   const type = String(query.type ?? "all") as PlaceType;
+  const mode: "drive" | "walk" = String(query.mode ?? "drive") === "walk" ? "walk" : "drive";
 
   if (![north, south, east, west, userLat, userLng].every(Number.isFinite)) {
     return { ok: false, error: "Bounds and user location are required" };
@@ -92,7 +94,7 @@ function parseQuery(query: Record<string, unknown>):
     return { ok: false, error: "Invalid place type" };
   }
 
-  return { ok: true, value: { north, south, east, west, type, userLat, userLng } };
+  return { ok: true, value: { north, south, east, west, type, userLat, userLng, mode } };
 }
 
 async function fetchPlaces(params: { north: number; south: number; east: number; west: number; type: PlaceType }) {
@@ -158,7 +160,8 @@ function cleanPlace(element: OverpassElement, userLat: number, userLng: number):
       type: amenity,
       tags: pickDetailTags(tags),
       closingMinutes,
-      distanceKm: haversineKm(userLat, userLng, lat!, lng!)
+      distanceKm: haversineKm(userLat, userLng, lat!, lng!),
+      isHappyHour: getHappyHourState(tags.happy_hours)
     }
   ];
 }
@@ -172,6 +175,16 @@ function pickDetailTags(tags: Record<string, string | undefined>) {
 
     return selectedTags;
   }, {});
+}
+
+function getHappyHourState(happyHours: string | undefined): boolean {
+  if (!happyHours) return false;
+  try {
+    const oh = new OpeningHours(happyHours);
+    return oh.getState();
+  } catch {
+    return false;
+  }
 }
 
 function getClosingMinutes(openingHours: string) {
@@ -209,17 +222,18 @@ function buildAddress(tags: Record<string, string | undefined>) {
   return address || null;
 }
 
-async function attachDriveTimes(places: CleanPlace[], userLat: number, userLng: number): Promise<CleanPlace[]> {
+async function attachDriveTimes(places: CleanPlace[], userLat: number, userLng: number, mode: "drive" | "walk"): Promise<CleanPlace[]> {
   if (!places.length) {
     return places;
   }
 
+  const profile = mode === "walk" ? "foot" : "driving";
   const coordinates = [
     `${userLng},${userLat}`,
     ...places.map((place) => `${place.lng},${place.lat}`)
   ].join(";");
   const destinations = places.map((_place, index) => index + 1).join(";");
-  const url = `${OSRM_TABLE_URL}/${coordinates}?sources=0&destinations=${destinations}&annotations=duration`;
+  const url = `${OSRM_BASE_URL}/${profile}/${coordinates}?sources=0&destinations=${destinations}&annotations=duration`;
 
   try {
     const response = await fetch(url, {

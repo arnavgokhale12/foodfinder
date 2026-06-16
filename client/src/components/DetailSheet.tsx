@@ -1,15 +1,16 @@
 import type { Place } from "../types";
-import { categoryLabel, formatClosingTime, formatDistance, formatDriveTime, pinToneForClosingMinutes } from "../utils/timeUtils";
+import { categoryLabel, formatClosingTime, formatDistance, formatTravelTime, pinToneForClosingMinutes } from "../utils/timeUtils";
 
 interface DetailSheetProps {
   place: Place | null;
   isSaved: boolean;
+  travelMode: "drive" | "walk";
   onClose: () => void;
   onShareResult: (message: string) => void;
   onToggleSaved: (place: Place) => void;
 }
 
-export function DetailSheet({ place, isSaved, onClose, onShareResult, onToggleSaved }: DetailSheetProps) {
+export function DetailSheet({ place, isSaved, travelMode, onClose, onShareResult, onToggleSaved }: DetailSheetProps) {
   const tone = place ? pinToneForClosingMinutes(place.closingMinutes) : "green";
   const directionsUrl = place
     ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${place.lat},${place.lng}`)}`
@@ -57,6 +58,11 @@ export function DetailSheet({ place, isSaved, onClose, onShareResult, onToggleSa
           <div className="space-y-4">
             <div className="mx-auto h-1.5 w-12 rounded-full bg-white/20" />
             <ClosingStatus closingMinutes={place.closingMinutes} />
+            {place.isHappyHour ? (
+              <div className="rounded-2xl border border-amber-300/40 bg-amber-300/15 px-4 py-3 text-sm font-black text-amber-100">
+                Happy hour is on right now
+              </div>
+            ) : null}
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.18em] text-lime-200/80">{categoryLabel(place.type)}</p>
@@ -85,7 +91,7 @@ export function DetailSheet({ place, isSaved, onClose, onShareResult, onToggleSa
 
             <div className="grid grid-cols-3 gap-3">
               <InfoCard label="Hours" tone={tone} value={formatClosingTime(place.closingMinutes)} />
-              <InfoCard label="Drive" value={formatDriveTime(place.driveMinutes)} />
+              <InfoCard label={travelMode === "walk" ? "Walk" : "Drive"} value={formatTravelTime(place.driveMinutes, travelMode)} />
               <InfoCard label="Source" value="OpenStreetMap" />
             </div>
 

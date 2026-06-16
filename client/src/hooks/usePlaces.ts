@@ -6,6 +6,7 @@ interface UsePlacesArgs {
   enabled: boolean;
   filter: ServerPlaceType;
   userLocation: Coordinates;
+  travelMode: "drive" | "walk";
 }
 
 interface CacheEntry {
@@ -17,7 +18,7 @@ const CACHE_TTL_MS = 2 * 60 * 1000;
 const viewportCache = new Map<string, CacheEntry>();
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
 
-export function usePlaces({ bounds, enabled, filter, userLocation }: UsePlacesArgs) {
+export function usePlaces({ bounds, enabled, filter, userLocation, travelMode }: UsePlacesArgs) {
   const [places, setPlaces] = useState<Place[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +43,7 @@ export function usePlaces({ bounds, enabled, filter, userLocation }: UsePlacesAr
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       pruneExpiredEntries();
-      const cacheKey = getCacheKey(bounds, filter);
+      const cacheKey = getCacheKey(bounds, filter, travelMode);
       const cached = viewportCache.get(cacheKey);
 
       if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
@@ -62,7 +63,8 @@ export function usePlaces({ bounds, enabled, filter, userLocation }: UsePlacesAr
         west: String(bounds.west),
         type: filter,
         userLat: String(userLocation.lat),
-        userLng: String(userLocation.lng)
+        userLng: String(userLocation.lng),
+        mode: travelMode
       });
 
       try {
@@ -95,7 +97,7 @@ export function usePlaces({ bounds, enabled, filter, userLocation }: UsePlacesAr
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [bounds, enabled, filter, retryNonce, userLocation.lat, userLocation.lng]);
+  }, [bounds, enabled, filter, retryNonce, travelMode, userLocation.lat, userLocation.lng]);
 
   useEffect(() => {
     if (!error) {
@@ -109,13 +111,14 @@ export function usePlaces({ bounds, enabled, filter, userLocation }: UsePlacesAr
   return { places, isLoading, error, clearError, retry };
 }
 
-function getCacheKey(bounds: Bounds, type: ServerPlaceType) {
+function getCacheKey(bounds: Bounds, type: ServerPlaceType, travelMode: "drive" | "walk") {
   return [
     Math.round(bounds.north * 100),
     Math.round(bounds.south * 100),
     Math.round(bounds.east * 100),
     Math.round(bounds.west * 100),
-    type
+    type,
+    travelMode
   ].join(",");
 }
 

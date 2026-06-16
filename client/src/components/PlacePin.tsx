@@ -4,6 +4,7 @@ import { formatClosingTime, pinToneForClosingMinutes } from "../utils/timeUtils"
 interface CreatePlacePinOptions {
   isSaved: boolean;
   isPicked: boolean;
+  travelMode: "drive" | "walk";
   onSelect: (place: Place) => void;
   onToggleSaved: (place: Place) => void;
 }
@@ -16,7 +17,8 @@ export function createPlacePin(place: Place, options: CreatePlacePinOptions): HT
     options.isPicked ? "ff-pin-picked" : ""
   ].join(" ");
   element.setAttribute("aria-label", place.name);
-  element.setAttribute("data-tooltip", `${place.name} · ${formatClosingTime(place.closingMinutes)}`);
+  const hhLabel = place.isHappyHour ? " · Happy Hour" : "";
+  element.setAttribute("data-tooltip", `${place.name}${hhLabel} · ${formatClosingTime(place.closingMinutes)}`);
 
   const pinButton = document.createElement("button");
   pinButton.type = "button";
@@ -24,11 +26,12 @@ export function createPlacePin(place: Place, options: CreatePlacePinOptions): HT
   pinButton.addEventListener("click", () => options.onSelect(place));
 
   const image = document.createElement("span");
+  const ringClass = tone === "yellow" ? "ff-pin-yellow" : place.isHappyHour ? "ff-pin-happy" : "";
   image.className = [
     "ff-pin-token transition duration-200 group-hover:scale-105",
     `ff-pin-${place.type}`,
-    tone === "green" ? "ff-pin-green" : "ff-pin-yellow"
-  ].join(" ");
+    ringClass
+  ].filter(Boolean).join(" ");
 
   const logoUrl = getLogoUrl(place);
   if (logoUrl) {
@@ -60,7 +63,8 @@ export function createPlacePin(place: Place, options: CreatePlacePinOptions): HT
 
   const label = document.createElement("span");
   label.className = "mt-1 rounded-full bg-black/75 px-2 py-0.5 text-[11px] font-bold text-white shadow-lg backdrop-blur";
-  label.textContent = place.driveMinutes ? `${place.driveMinutes} min` : "-- min";
+  const modeStr = options.travelMode === "walk" ? " walk" : "";
+  label.textContent = place.driveMinutes ? `${place.driveMinutes} min${modeStr}` : "-- min";
 
   pinButton.append(image, label);
   element.append(pinButton, heart);

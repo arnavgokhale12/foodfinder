@@ -2,7 +2,7 @@ import type { Place } from "../types";
 import {
   categoryLabel,
   formatClosingTime,
-  formatDriveTime,
+  formatTravelTime,
   pinToneForClosingMinutes,
   titleCaseCuisine
 } from "../utils/timeUtils";
@@ -12,11 +12,12 @@ export type SortMode = "nearest" | "closing";
 interface ListViewProps {
   places: Place[];
   sortMode: SortMode;
+  travelMode: "drive" | "walk";
   onSortChange: (sortMode: SortMode) => void;
   onPlaceSelect: (place: Place) => void;
 }
 
-export function ListView({ places, sortMode, onSortChange, onPlaceSelect }: ListViewProps) {
+export function ListView({ places, sortMode, travelMode, onSortChange, onPlaceSelect }: ListViewProps) {
   const sortedPlaces = [...places].sort((a, b) => {
     if (sortMode === "closing") {
       return (a.closingMinutes ?? Number.MAX_SAFE_INTEGER) - (b.closingMinutes ?? Number.MAX_SAFE_INTEGER);
@@ -63,7 +64,7 @@ export function ListView({ places, sortMode, onSortChange, onPlaceSelect }: List
                   </span>
                 </span>
                 <span className="shrink-0 text-right">
-                  <span className="block text-sm font-black text-white">{formatDriveTime(place.driveMinutes)}</span>
+                  <span className="block text-sm font-black text-white">{formatTravelTime(place.driveMinutes, travelMode)}</span>
                   <span className={tone === "yellow" ? "text-xs font-black text-yellow-300" : "text-xs font-bold text-lime-300"}>
                     {formatClosingTime(place.closingMinutes)}
                   </span>

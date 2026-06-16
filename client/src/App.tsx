@@ -27,6 +27,7 @@ export default function App() {
   const [recenterKey, setRecenterKey] = useState(0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTarget, setSearchTarget] = useState<{ lat: number; lng: number; seq: number } | null>(null);
+  const [travelMode, setTravelMode] = useState<"drive" | "walk">("drive");
 
   const handleSearchSelect = useCallback((result: GeoResult) => {
     setSearchTarget({ lat: result.lat, lng: result.lng, seq: Date.now() });
@@ -37,7 +38,8 @@ export default function App() {
     bounds,
     enabled: shouldFetch,
     filter: serverFilter,
-    userLocation: location
+    userLocation: location,
+    travelMode
   });
 
   const savedPlaceIds = useMemo(() => savedPlaces.map((place) => place.id), [savedPlaces]);
@@ -134,6 +136,7 @@ export default function App() {
           savedPlaceIds={savedPlaceIds}
           searchTarget={searchTarget}
           showUserLocation={!usedFallback && !isLocating}
+          travelMode={travelMode}
           userLocation={location}
         />
       ) : (
@@ -142,6 +145,7 @@ export default function App() {
           onSortChange={setSortMode}
           places={visiblePlaces}
           sortMode={sortMode}
+          travelMode={travelMode}
         />
       )}
       <FilterBar activeFilter={filter} onChange={handleFilterChange} />
@@ -215,19 +219,37 @@ export default function App() {
         </button>
       ) : null}
 
-      {viewMode === "map" && !usedFallback && !isLocating ? (
-        <button
-          aria-label="Re-center on my location"
-          className="fixed bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] left-4 z-20 grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-black/60 text-white shadow-2xl backdrop-blur-xl transition hover:bg-white/15"
-          onClick={() => setRecenterKey((k) => k + 1)}
-          type="button"
-        >
-          <svg aria-hidden="true" fill="none" height="18" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="18">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-          </svg>
-        </button>
-      ) : null}
+      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] left-4 z-20 flex flex-col items-start gap-2">
+        <div className="flex rounded-full border border-white/10 bg-black/60 p-0.5 shadow-2xl backdrop-blur-xl">
+          <button
+            className={`rounded-full px-3 py-1.5 text-xs font-black transition-colors ${travelMode === "drive" ? "bg-white/95 text-black" : "text-white/65 hover:text-white"}`}
+            onClick={() => setTravelMode("drive")}
+            type="button"
+          >
+            Drive
+          </button>
+          <button
+            className={`rounded-full px-3 py-1.5 text-xs font-black transition-colors ${travelMode === "walk" ? "bg-white/95 text-black" : "text-white/65 hover:text-white"}`}
+            onClick={() => setTravelMode("walk")}
+            type="button"
+          >
+            Walk
+          </button>
+        </div>
+        {viewMode === "map" && !usedFallback && !isLocating ? (
+          <button
+            aria-label="Re-center on my location"
+            className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-black/60 text-white shadow-2xl backdrop-blur-xl transition hover:bg-white/15"
+            onClick={() => setRecenterKey((k) => k + 1)}
+            type="button"
+          >
+            <svg aria-hidden="true" fill="none" height="18" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="18">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+            </svg>
+          </button>
+        ) : null}
+      </div>
 
       <div className="pointer-events-none fixed left-4 top-[calc(env(safe-area-inset-top)+5rem)] z-20 space-y-2">
         {isLocating ? <StatusPill>Finding your location...</StatusPill> : null}
@@ -260,13 +282,14 @@ export default function App() {
         onShareResult={handleToast}
         onToggleSaved={handleToggleSaved}
         place={selectedPlace}
+        travelMode={travelMode}
       />
     </main>
   );
 }
 
 function getServerFilter(filter: PlaceType): ServerPlaceType {
-  if (filter === "vegan" || filter === "vegetarian" || filter === "saved") {
+  if (filter === "vegan" || filter === "vegetarian" || filter === "saved" || filter === "last-call" || filter === "outdoor") {
     return "all";
   }
 
@@ -280,6 +303,14 @@ function applyClientFilters(places: Place[], filter: PlaceType, cuisineFilter: s
     }
 
     if (filter === "vegetarian" && place.tags?.["diet:vegetarian"] !== "yes") {
+      return false;
+    }
+
+    if (filter === "last-call" && !(place.closingMinutes !== null && place.closingMinutes <= 30)) {
+      return false;
+    }
+
+    if (filter === "outdoor" && place.tags?.outdoor_seating !== "yes") {
       return false;
     }
 

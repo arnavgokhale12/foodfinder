@@ -24,6 +24,7 @@ interface MapProps {
   recenterTrigger: number;
   savedPlaceIds: string[];
   searchTarget: SearchTarget | null;
+  travelMode: "drive" | "walk";
   onBoundsChange: (bounds: Bounds | null) => void;
   onPlaceSelect: (place: Place) => void;
   onToggleSaved: (place: Place) => void;
@@ -45,6 +46,7 @@ export function Map({
   recenterTrigger,
   savedPlaceIds,
   searchTarget,
+  travelMode,
   onBoundsChange,
   onPlaceSelect,
   onToggleSaved,
@@ -205,6 +207,7 @@ export function Map({
       const markerElement = createPlacePin(place, {
         isPicked: pickedPlaceId === place.id,
         isSaved: savedPlaceIds.includes(place.id),
+        travelMode,
         onSelect: onPlaceSelect,
         onToggleSaved
       });
@@ -213,7 +216,7 @@ export function Map({
         .setLngLat([place.lng, place.lat])
         .addTo(map);
     });
-  }, [onPlaceSelect, onToggleSaved, pickedPlaceId, places, savedPlaceIds]);
+  }, [onPlaceSelect, onToggleSaved, pickedPlaceId, places, savedPlaceIds, travelMode]);
 
   if (!hasMapTilerKey) {
     return (

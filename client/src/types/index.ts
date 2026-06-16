@@ -1,6 +1,6 @@
-export type PlaceType = "all" | "restaurant" | "bar" | "cafe" | "late-night" | "vegan" | "vegetarian" | "saved";
+export type PlaceType = "all" | "restaurant" | "bar" | "cafe" | "late-night" | "last-call" | "outdoor" | "vegan" | "vegetarian" | "saved";
 
-export type ServerPlaceType = Exclude<PlaceType, "vegan" | "vegetarian" | "saved">;
+export type ServerPlaceType = Exclude<PlaceType, "vegan" | "vegetarian" | "saved" | "last-call" | "outdoor">;
 
 export type PinTone = "green" | "yellow";
 
@@ -30,4 +30,5 @@ export interface Place {
   phone?: string;
   type: "restaurant" | "bar" | "cafe" | "place";
   tags?: Record<string, string>;
+  isHappyHour?: boolean;
 }

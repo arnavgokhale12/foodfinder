@@ -6,6 +6,8 @@ const filters: Array<{ value: PlaceType; label: string }> = [
   { value: "bar", label: "Bars" },
   { value: "cafe", label: "Coffee" },
   { value: "late-night", label: "Late Night" },
+  { value: "last-call", label: "Last Call" },
+  { value: "outdoor", label: "Outdoor" },
   { value: "vegan", label: "Vegan" },
   { value: "vegetarian", label: "Vegetarian" },
   { value: "saved", label: "Saved" }

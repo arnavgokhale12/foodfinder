@@ -132,6 +132,11 @@ body {
   border-color: #eab308;
 }
 
+.ff-pin-happy::after {
+  animation: pin-pulse 2s ease-in-out infinite;
+  border-color: #06b6d4;
+}
+
 .ff-pin-heart {
   align-items: center;
   background: rgba(3, 4, 6, 0.78);
