@@ -15,6 +15,7 @@ interface MapProps {
   userLocation: Coordinates;
   focusedPlace: Place | null;
   pickedPlaceId: string | null;
+  recenterTrigger: number;
   savedPlaceIds: string[];
   onBoundsChange: (bounds: Bounds | null) => void;
   onPlaceSelect: (place: Place) => void;
@@ -34,6 +35,7 @@ export function Map({
   userLocation,
   focusedPlace,
   pickedPlaceId,
+  recenterTrigger,
   savedPlaceIds,
   onBoundsChange,
   onPlaceSelect,
@@ -128,6 +130,15 @@ export function Map({
       // Silently swallow; the load-handler fallback will center the map.
     }
   }, [userLocation.lat, userLocation.lng]);
+
+  useEffect(() => {
+    if (recenterTrigger === 0) return; // skip the initial mount value
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    try {
+      map.flyTo({ center: [userLocation.lng, userLocation.lat], essential: true, zoom: Math.max(map.getZoom(), 13) });
+    } catch { /* ignore */ }
+  }, [recenterTrigger, userLocation.lat, userLocation.lng]);
 
   useEffect(() => {
     const map = mapRef.current;

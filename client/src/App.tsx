@@ -23,6 +23,7 @@ export default function App() {
   const [focusedPlace, setFocusedPlace] = useState<Place | null>(null);
   const [pickedPlaceId, setPickedPlaceId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [recenterKey, setRecenterKey] = useState(0);
   const serverFilter = getServerFilter(filter);
   const shouldFetch = isZoomedIn && filter !== "saved";
   const { places, isLoading, error, retry } = usePlaces({
@@ -109,6 +110,7 @@ export default function App() {
           onZoomGateChange={handleZoomGateChange}
           pickedPlaceId={pickedPlaceId}
           places={visiblePlaces}
+          recenterTrigger={recenterKey}
           savedPlaceIds={savedPlaceIds}
           showUserLocation={!usedFallback && !isLocating}
           userLocation={location}
@@ -172,6 +174,20 @@ export default function App() {
           type="button"
         >
           Pick for me
+        </button>
+      ) : null}
+
+      {viewMode === "map" && !usedFallback && !isLocating ? (
+        <button
+          aria-label="Re-center on my location"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] left-4 z-20 grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-black/60 text-white shadow-2xl backdrop-blur-xl transition hover:bg-white/15"
+          onClick={() => setRecenterKey((k) => k + 1)}
+          type="button"
+        >
+          <svg aria-hidden="true" fill="none" height="18" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="18">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+          </svg>
         </button>
       ) : null}
 
