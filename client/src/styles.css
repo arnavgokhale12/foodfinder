@@ -39,6 +39,18 @@ body {
   background: linear-gradient(90deg, transparent, rgba(5, 6, 8, 0.78));
 }
 
+.ff-cuisine-scroll::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  top: calc(env(safe-area-inset-top) + 4.5rem);
+  z-index: 1;
+  height: 4rem;
+  width: 4rem;
+  background: linear-gradient(90deg, transparent, rgba(5, 6, 8, 0.78));
+}
+
 .ff-sheet {
   padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);
   transition-timing-function: cubic-bezier(0.18, 0.89, 0.32, 1.16);
@@ -46,6 +58,7 @@ body {
 
 .ff-pin-shell {
   filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.35));
+  position: relative;
 }
 
 .ff-pin-token {
@@ -88,6 +101,35 @@ body {
   border-color: #eab308;
 }
 
+.ff-pin-heart {
+  align-items: center;
+  background: rgba(3, 4, 6, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 9999px;
+  color: white;
+  display: flex;
+  font-size: 13px;
+  font-weight: 900;
+  height: 22px;
+  justify-content: center;
+  line-height: 1;
+  position: absolute;
+  right: -9px;
+  top: -10px;
+  width: 22px;
+  z-index: 2;
+}
+
+.ff-pin-heart-saved {
+  background: #fb7185;
+  border-color: rgba(255, 255, 255, 0.72);
+  color: white;
+}
+
+.ff-pin-picked .ff-pin-token {
+  animation: picked-pin-pulse 0.72s ease-out 2;
+}
+
 .ff-loading-wash {
   background-image: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.12) 45%, transparent 70%);
   background-size: 220% 100%;
@@ -123,6 +165,17 @@ body {
   50% {
     opacity: 0.62;
     transform: scale(1.08);
+  }
+}
+
+@keyframes picked-pin-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(1.18);
   }
 }
 

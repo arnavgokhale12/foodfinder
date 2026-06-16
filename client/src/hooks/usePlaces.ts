@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Bounds, Coordinates, Place, PlaceType } from "../types";
+import type { Bounds, Coordinates, Place, ServerPlaceType } from "../types";
 
 interface UsePlacesArgs {
   bounds: Bounds | null;
   enabled: boolean;
-  filter: PlaceType;
+  filter: ServerPlaceType;
   userLocation: Coordinates;
 }
 
@@ -109,7 +109,7 @@ export function usePlaces({ bounds, enabled, filter, userLocation }: UsePlacesAr
   return { places, isLoading, error, clearError, retry };
 }
 
-function getCacheKey(bounds: Bounds, type: PlaceType) {
+function getCacheKey(bounds: Bounds, type: ServerPlaceType) {
   return [
     Math.round(bounds.north * 100),
     Math.round(bounds.south * 100),

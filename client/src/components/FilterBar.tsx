@@ -5,7 +5,10 @@ const filters: Array<{ value: PlaceType; label: string }> = [
   { value: "restaurant", label: "Restaurants" },
   { value: "bar", label: "Bars" },
   { value: "cafe", label: "Coffee" },
-  { value: "late-night", label: "Late Night" }
+  { value: "late-night", label: "Late Night" },
+  { value: "vegan", label: "Vegan" },
+  { value: "vegetarian", label: "Vegetarian" },
+  { value: "saved", label: "Saved" }
 ];
 
 interface FilterBarProps {

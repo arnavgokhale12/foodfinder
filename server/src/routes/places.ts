@@ -24,12 +24,24 @@ interface CleanPlace {
   address: string | null;
   phone: string | null;
   type: Amenity;
+  tags: Record<string, string>;
 }
 
 const router = Router();
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 const OSRM_TABLE_URL = "https://router.project-osrm.org/table/v1/driving";
 const MAX_RESULTS = 40;
+const DETAIL_TAG_KEYS = [
+  "cuisine",
+  "diet:vegan",
+  "diet:vegetarian",
+  "diet:gluten_free",
+  "outdoor_seating",
+  "takeaway",
+  "delivery",
+  "wheelchair",
+  "website"
+] as const;
 const AMENITIES_BY_TYPE: Record<PlaceType, Amenity[]> = {
   all: ["restaurant", "bar", "cafe"],
   restaurant: ["restaurant"],
@@ -144,10 +156,22 @@ function cleanPlace(element: OverpassElement, userLat: number, userLng: number):
       address: buildAddress(tags),
       phone: tags.phone ?? tags["contact:phone"] ?? null,
       type: amenity,
+      tags: pickDetailTags(tags),
       closingMinutes,
       distanceKm: haversineKm(userLat, userLng, lat!, lng!)
     }
   ];
+}
+
+function pickDetailTags(tags: Record<string, string | undefined>) {
+  return DETAIL_TAG_KEYS.reduce<Record<string, string>>((selectedTags, key) => {
+    const value = tags[key];
+    if (value) {
+      selectedTags[key] = value;
+    }
+
+    return selectedTags;
+  }, {});
 }
 
 function getClosingMinutes(openingHours: string) {

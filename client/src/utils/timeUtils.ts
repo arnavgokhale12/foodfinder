@@ -73,6 +73,26 @@ export function categoryEmoji(type: Place["type"]): string {
   return "📍";
 }
 
+export function splitCuisines(cuisine?: string): string[] {
+  if (!cuisine) {
+    return [];
+  }
+
+  return cuisine
+    .split(/[;,]/)
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function titleCaseCuisine(cuisine: string): string {
+  return cuisine
+    .split(/[;,]/)
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, " "))
+    .join(", ");
+}
+
 export function closingMinutesFromOpeningPeriods(periods?: OpeningPeriod[]): number | null | undefined {
   if (!periods?.length) {
     return undefined;

@@ -1,4 +1,6 @@
-export type PlaceType = "all" | "restaurant" | "bar" | "cafe" | "late-night";
+export type PlaceType = "all" | "restaurant" | "bar" | "cafe" | "late-night" | "vegan" | "vegetarian" | "saved";
+
+export type ServerPlaceType = Exclude<PlaceType, "vegan" | "vegetarian" | "saved">;
 
 export type PinTone = "green" | "yellow";
 
@@ -27,4 +29,5 @@ export interface Place {
   address?: string;
   phone?: string;
   type: "restaurant" | "bar" | "cafe" | "place";
+  tags?: Record<string, string>;
 }

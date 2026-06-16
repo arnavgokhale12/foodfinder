@@ -13,8 +13,12 @@ interface MapProps {
   places: Place[];
   showUserLocation: boolean;
   userLocation: Coordinates;
+  focusedPlace: Place | null;
+  pickedPlaceId: string | null;
+  savedPlaceIds: string[];
   onBoundsChange: (bounds: Bounds | null) => void;
   onPlaceSelect: (place: Place) => void;
+  onToggleSaved: (place: Place) => void;
   onZoomGateChange: (isZoomedIn: boolean) => void;
 }
 
@@ -24,7 +28,18 @@ const mapStyle = `https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MA
 
 const MIN_FETCH_ZOOM = 13;
 
-export function Map({ places, showUserLocation, userLocation, onBoundsChange, onPlaceSelect, onZoomGateChange }: MapProps) {
+export function Map({
+  places,
+  showUserLocation,
+  userLocation,
+  focusedPlace,
+  pickedPlaceId,
+  savedPlaceIds,
+  onBoundsChange,
+  onPlaceSelect,
+  onToggleSaved,
+  onZoomGateChange
+}: MapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<MapLibreMarker[]>([]);
@@ -117,6 +132,19 @@ export function Map({ places, showUserLocation, userLocation, onBoundsChange, on
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !focusedPlace) {
+      return;
+    }
+
+    map.flyTo({
+      center: [focusedPlace.lng, focusedPlace.lat],
+      essential: true,
+      zoom: Math.max(map.getZoom(), 15)
+    });
+  }, [focusedPlace?.id, focusedPlace?.lat, focusedPlace?.lng]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !window.maplibregl) {
       return;
     }
@@ -124,14 +152,18 @@ export function Map({ places, showUserLocation, userLocation, onBoundsChange, on
     const maplibregl = window.maplibregl;
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = places.map((place) => {
-      const markerElement = createPlacePin(place);
-      markerElement.addEventListener("click", () => onPlaceSelect(place));
+      const markerElement = createPlacePin(place, {
+        isPicked: pickedPlaceId === place.id,
+        isSaved: savedPlaceIds.includes(place.id),
+        onSelect: onPlaceSelect,
+        onToggleSaved
+      });
 
       return new maplibregl.Marker({ element: markerElement, anchor: "center" })
         .setLngLat([place.lng, place.lat])
         .addTo(map);
     });
-  }, [onPlaceSelect, places]);
+  }, [onPlaceSelect, onToggleSaved, pickedPlaceId, places, savedPlaceIds]);
 
   if (!hasMapTilerKey) {
     return (

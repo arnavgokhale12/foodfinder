@@ -1,12 +1,26 @@
 import type { Place } from "../types";
 import { pinToneForClosingMinutes } from "../utils/timeUtils";
 
-export function createPlacePin(place: Place): HTMLButtonElement {
+interface CreatePlacePinOptions {
+  isSaved: boolean;
+  isPicked: boolean;
+  onSelect: (place: Place) => void;
+  onToggleSaved: (place: Place) => void;
+}
+
+export function createPlacePin(place: Place, options: CreatePlacePinOptions): HTMLDivElement {
   const tone = pinToneForClosingMinutes(place.closingMinutes);
-  const element = document.createElement("button");
-  element.type = "button";
-  element.className = "group ff-pin-shell flex -translate-x-1/2 -translate-y-1/2 flex-col items-center border-0 bg-transparent p-0";
+  const element = document.createElement("div");
+  element.className = [
+    "group ff-pin-shell flex -translate-x-1/2 -translate-y-1/2 flex-col items-center",
+    options.isPicked ? "ff-pin-picked" : ""
+  ].join(" ");
   element.setAttribute("aria-label", place.name);
+
+  const pinButton = document.createElement("button");
+  pinButton.type = "button";
+  pinButton.className = "relative flex flex-col items-center border-0 bg-transparent p-0";
+  pinButton.addEventListener("click", () => options.onSelect(place));
 
   const image = document.createElement("span");
   image.className = [
@@ -17,11 +31,25 @@ export function createPlacePin(place: Place): HTMLButtonElement {
 
   image.innerHTML = categoryIcon(place.type);
 
+  const heart = document.createElement("button");
+  heart.type = "button";
+  heart.className = [
+    "ff-pin-heart",
+    options.isSaved ? "ff-pin-heart-saved" : ""
+  ].join(" ");
+  heart.setAttribute("aria-label", options.isSaved ? `Remove ${place.name} from saved` : `Save ${place.name}`);
+  heart.textContent = options.isSaved ? "♥" : "♡";
+  heart.addEventListener("click", (event) => {
+    event.stopPropagation();
+    options.onToggleSaved(place);
+  });
+
   const label = document.createElement("span");
   label.className = "mt-1 rounded-full bg-black/75 px-2 py-0.5 text-[11px] font-bold text-white shadow-lg backdrop-blur";
   label.textContent = place.driveMinutes ? `${place.driveMinutes} min` : "-- min";
 
-  element.append(image, label);
+  pinButton.append(image, label);
+  element.append(pinButton, heart);
   return element;
 }
 
