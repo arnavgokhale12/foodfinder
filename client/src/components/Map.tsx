@@ -45,6 +45,10 @@ export function Map({
   const markersRef = useRef<MapLibreMarker[]>([]);
   const userMarkerRef = useRef<MapLibreMarker | null>(null);
   const initCenterRef = useRef<[number, number]>([userLocation.lng, userLocation.lat]);
+  // Always up-to-date ref so the load handler can read the current location
+  // without being a dep of the init effect.
+  const userLocationRef = useRef(userLocation);
+  userLocationRef.current = userLocation;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current || !hasMapTilerKey || !window.maplibregl) {
@@ -84,7 +88,16 @@ export function Map({
       });
     };
 
-    map.on("load", emitBounds);
+    map.on("load", () => {
+      emitBounds();
+      // If real location resolved before the style finished loading,
+      // fly there now that the map is ready.
+      const loc = userLocationRef.current;
+      const [initLng, initLat] = initCenterRef.current;
+      if (loc.lat !== initLat || loc.lng !== initLng) {
+        map.flyTo({ center: [loc.lng, loc.lat], essential: true, zoom: 13 });
+      }
+    });
     map.on("moveend", emitBounds);
     map.on("zoomend", emitBounds);
 
@@ -99,15 +112,21 @@ export function Map({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) {
+    // Only fly once the style is loaded — calling flyTo on an unready map
+    // can throw in MapLibre 5.x and crash the React tree in React 19.
+    if (!map || !map.isStyleLoaded()) {
       return;
     }
 
-    map.flyTo({
-      center: [userLocation.lng, userLocation.lat],
-      essential: true,
-      zoom: Math.max(map.getZoom(), 13)
-    });
+    try {
+      map.flyTo({
+        center: [userLocation.lng, userLocation.lat],
+        essential: true,
+        zoom: Math.max(map.getZoom(), 13)
+      });
+    } catch {
+      // Silently swallow; the load-handler fallback will center the map.
+    }
   }, [userLocation.lat, userLocation.lng]);
 
   useEffect(() => {
