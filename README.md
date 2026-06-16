@@ -4,8 +4,9 @@ FoodFinder is a mobile-first map app for finding restaurants, bars, and coffee s
 
 ![FoodFinder screenshot](docs/screenshot.png)
 
-## Live URL
+## Links
 
+- GitHub: https://github.com/arnavgokhale12/foodfinder
 - Frontend: coming soon
 - API: coming soon
 
@@ -106,6 +107,11 @@ Recommended:
 - Frontend: Vercel
 - Backend: Railway or Render
 - Domain: Vercel subdomain or a custom domain
+
+Included deploy config:
+
+- `client/vercel.json` for Vercel when the project root is set to `client`
+- `render.yaml` for a Render web service running the Express API from `server`
 
 The frontend currently proxies `/api` to the local server during development. For production, either:
 
