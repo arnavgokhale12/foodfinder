@@ -12,13 +12,15 @@ FoodFinder is a mobile-first map app for finding restaurants, bars, and coffee s
 ## Features
 
 - Shows only currently open restaurants, bars, and cafes
-- Filters for all places, restaurants, bars, coffee, late night, vegan, vegetarian
+- Filters: All, Restaurants, Bars, Coffee, Late Night, Last Call (closing ≤30 min), Outdoor, Vegan, Vegetarian, Saved
 - Cuisine sub-filters dynamically generated per viewport
 - Viewport-driven results with a zoom gate to protect the Overpass API
-- Open/closing-soon visual states with green/yellow pin rings
-- Pin hover tooltip showing name + closing time
+- Drive/Walk toggle: switches OSRM routing profile between `/driving` and `/foot`
+- Open/closing-soon/happy-hour visual states with green/yellow/cyan pin rings
+- Happy hour detection from OSM `happy_hours` tag — cyan ring on pin, banner in detail sheet
+- Pin hover tooltip showing name, happy hour status, and closing time
 - Restaurant logos via Clearbit (falls back to category icon)
-- OSRM drive-time estimates on pins and detail sheets
+- OSRM travel-time estimates on pins, list view, and detail sheets
 - Opening-hours parsing from OpenStreetMap `opening_hours` tags
 - List view sortable by distance or closing time
 - Pick for me — random selection from visible open places
@@ -82,16 +84,12 @@ PORT=3001
 ## API
 
 ```text
-GET /api/places?north=&south=&east=&west=&type=&userLat=&userLng=
+GET /api/places?north=&south=&east=&west=&type=&userLat=&userLng=&mode=
 ```
 
-Supported `type` values:
+Supported `type` values: `all`, `restaurant`, `bar`, `cafe`, `late-night`
 
-- `all`
-- `restaurant`
-- `bar`
-- `cafe`
-- `late-night`
+Supported `mode` values: `drive` (default), `walk`
 
 Response shape:
 
@@ -110,6 +108,8 @@ Response shape:
     address: string | null;
     phone: string | null;
     type: "restaurant" | "bar" | "cafe";
+    isHappyHour: boolean;
+    tags: Record<string, string>;
   }>;
 }
 ```
