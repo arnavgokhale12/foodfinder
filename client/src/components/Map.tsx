@@ -9,6 +9,12 @@ declare global {
   }
 }
 
+interface SearchTarget {
+  lat: number;
+  lng: number;
+  seq: number;
+}
+
 interface MapProps {
   places: Place[];
   showUserLocation: boolean;
@@ -17,6 +23,7 @@ interface MapProps {
   pickedPlaceId: string | null;
   recenterTrigger: number;
   savedPlaceIds: string[];
+  searchTarget: SearchTarget | null;
   onBoundsChange: (bounds: Bounds | null) => void;
   onPlaceSelect: (place: Place) => void;
   onToggleSaved: (place: Place) => void;
@@ -37,6 +44,7 @@ export function Map({
   pickedPlaceId,
   recenterTrigger,
   savedPlaceIds,
+  searchTarget,
   onBoundsChange,
   onPlaceSelect,
   onToggleSaved,
@@ -139,6 +147,15 @@ export function Map({
       map.flyTo({ center: [userLocation.lng, userLocation.lat], essential: true, zoom: Math.max(map.getZoom(), 13) });
     } catch { /* ignore */ }
   }, [recenterTrigger, userLocation.lat, userLocation.lng]);
+
+  useEffect(() => {
+    if (!searchTarget) return;
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    try {
+      map.flyTo({ center: [searchTarget.lng, searchTarget.lat], essential: true, zoom: 14 });
+    } catch { /* ignore */ }
+  }, [searchTarget]);
 
   useEffect(() => {
     const map = mapRef.current;

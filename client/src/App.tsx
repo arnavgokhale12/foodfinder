@@ -3,6 +3,7 @@ import { DetailSheet } from "./components/DetailSheet";
 import { FilterBar } from "./components/FilterBar";
 import { ListView, type SortMode } from "./components/ListView";
 import { Map } from "./components/Map";
+import { SearchBar, type GeoResult } from "./components/SearchBar";
 import { usePlaces } from "./hooks/usePlaces";
 import { useUserLocation } from "./hooks/useUserLocation";
 import type { Bounds, Place, PlaceType, ServerPlaceType } from "./types";
@@ -24,6 +25,12 @@ export default function App() {
   const [pickedPlaceId, setPickedPlaceId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [recenterKey, setRecenterKey] = useState(0);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchTarget, setSearchTarget] = useState<{ lat: number; lng: number; seq: number } | null>(null);
+
+  const handleSearchSelect = useCallback((result: GeoResult) => {
+    setSearchTarget({ lat: result.lat, lng: result.lng, seq: Date.now() });
+  }, []);
   const serverFilter = getServerFilter(filter);
   const shouldFetch = isZoomedIn && filter !== "saved";
   const { places, isLoading, error, retry } = usePlaces({
@@ -98,10 +105,11 @@ export default function App() {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement;
+      if (e.key === "Escape") { setSelectedPlace(null); setIsSearchOpen(false); return; }
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
-      if (e.key === "p" || e.key === "P") handlePickForMe();
+      if (e.key === "/") { e.preventDefault(); setIsSearchOpen(true); }
+      else if (e.key === "p" || e.key === "P") handlePickForMe();
       else if (e.key === "l" || e.key === "L") setViewMode((m) => (m === "map" ? "list" : "map"));
-      else if (e.key === "Escape") setSelectedPlace(null);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -124,6 +132,7 @@ export default function App() {
           places={visiblePlaces}
           recenterTrigger={recenterKey}
           savedPlaceIds={savedPlaceIds}
+          searchTarget={searchTarget}
           showUserLocation={!usedFallback && !isLocating}
           userLocation={location}
         />
@@ -145,13 +154,30 @@ export default function App() {
         />
       ) : null}
 
-      <button
-        className="fixed right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-30 rounded-full border border-white/10 bg-black/60 px-4 py-2 text-sm font-black text-white shadow-2xl backdrop-blur-xl transition hover:bg-white/15"
-        onClick={() => setViewMode((mode) => (mode === "map" ? "list" : "map"))}
-        type="button"
-      >
-        {viewMode === "map" ? "List" : "Map"}
-      </button>
+      <div className="fixed right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-30 flex items-center gap-2">
+        <button
+          aria-label="Search location"
+          className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-black/60 text-white shadow-2xl backdrop-blur-xl transition hover:bg-white/15"
+          onClick={() => setIsSearchOpen(true)}
+          type="button"
+        >
+          <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+        </button>
+        <button
+          className="rounded-full border border-white/10 bg-black/60 px-4 py-2 text-sm font-black text-white shadow-2xl backdrop-blur-xl transition hover:bg-white/15"
+          onClick={() => setViewMode((mode) => (mode === "map" ? "list" : "map"))}
+          type="button"
+        >
+          {viewMode === "map" ? "List" : "Map"}
+        </button>
+      </div>
+
+      {isSearchOpen ? (
+        <SearchBar onClose={() => setIsSearchOpen(false)} onSelect={handleSearchSelect} />
+      ) : null}
 
       {isLoading && isZoomedIn ? (
         <div className="pointer-events-none fixed inset-0 z-10 bg-black/30 ff-loading-wash" />
