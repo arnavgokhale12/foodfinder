@@ -6,7 +6,7 @@ FoodFinder is a mobile-first map app for finding restaurants, bars, and coffee s
 
 ## Links
 
-- **Live**: https://foodfinder-client.vercel.app
+- **Live**: https://foodfinder-client-arnavgokhale12s-projects.vercel.app
 - **GitHub**: https://github.com/arnavgokhale12/foodfinder
 
 ## Features
