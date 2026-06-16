@@ -144,10 +144,12 @@ export function Map({
     if (!userMarkerRef.current) {
       const dot = document.createElement("span");
       dot.className = "ff-user-location-dot";
-      userMarkerRef.current = new window.maplibregl.Marker({ element: dot, anchor: "center" }).addTo(map);
+      userMarkerRef.current = new window.maplibregl.Marker({ element: dot, anchor: "center" })
+        .setLngLat([userLocation.lng, userLocation.lat])
+        .addTo(map);
+    } else {
+      userMarkerRef.current.setLngLat([userLocation.lng, userLocation.lat]);
     }
-
-    userMarkerRef.current.setLngLat([userLocation.lng, userLocation.lat]);
   }, [showUserLocation, userLocation.lat, userLocation.lng]);
 
   useEffect(() => {
