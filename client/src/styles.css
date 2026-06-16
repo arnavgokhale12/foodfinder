@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #050608;
+  color: #f8fafc;
+  font-family:
+    "Avenir Next",
+    "Segoe UI",
+    sans-serif;
+}
+
+.maplibregl-ctrl-logo,
+.maplibregl-ctrl-attrib {
+  opacity: 0.55;
+}
+
+.ff-filter-scroll {
+  padding-top: calc(env(safe-area-inset-top) + 1rem);
+}
+
+.ff-filter-scroll::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 1;
+  height: calc(env(safe-area-inset-top) + 5.5rem);
+  width: 4rem;
+  background: linear-gradient(90deg, transparent, rgba(5, 6, 8, 0.78));
+}
+
+.ff-sheet {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);
+  transition-timing-function: cubic-bezier(0.18, 0.89, 0.32, 1.16);
+}
+
+.ff-pin-shell {
+  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.35));
+}
+
+.ff-pin-token {
+  align-items: center;
+  border-radius: 9999px;
+  color: white;
+  display: grid;
+  height: 48px;
+  justify-items: center;
+  position: relative;
+  width: 48px;
+}
+
+.ff-pin-token::after {
+  border: 3px solid #22c55e;
+  border-radius: inherit;
+  content: "";
+  inset: -4px;
+  position: absolute;
+}
+
+.ff-pin-restaurant {
+  background: #f97316;
+}
+
+.ff-pin-bar {
+  background: #7c3aed;
+}
+
+.ff-pin-cafe {
+  background: #92400e;
+}
+
+.ff-pin-place {
+  background: #334155;
+}
+
+.ff-pin-yellow::after {
+  animation: pin-pulse 1.5s ease-in-out infinite;
+  border-color: #eab308;
+}
+
+.ff-loading-wash {
+  background-image: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.12) 45%, transparent 70%);
+  background-size: 220% 100%;
+  animation: map-shimmer 1.4s ease-in-out infinite;
+}
+
+.ff-user-location-dot {
+  background: #3b82f6;
+  border: 2px solid white;
+  border-radius: 9999px;
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.65);
+  height: 12px;
+  position: relative;
+  width: 12px;
+}
+
+.ff-user-location-dot::after {
+  animation: user-location-pulse 1.8s ease-out infinite;
+  border: 2px solid rgba(96, 165, 250, 0.62);
+  border-radius: inherit;
+  content: "";
+  inset: -9px;
+  position: absolute;
+}
+
+@keyframes pin-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.62;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes map-shimmer {
+  0% {
+    background-position: 180% 0;
+  }
+
+  100% {
+    background-position: -80% 0;
+  }
+}
+
+@keyframes user-location-pulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.55);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
