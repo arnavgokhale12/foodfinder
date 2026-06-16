@@ -1,5 +1,5 @@
 import type { Place } from "../types";
-import { pinToneForClosingMinutes } from "../utils/timeUtils";
+import { formatClosingTime, pinToneForClosingMinutes } from "../utils/timeUtils";
 
 interface CreatePlacePinOptions {
   isSaved: boolean;
@@ -16,6 +16,7 @@ export function createPlacePin(place: Place, options: CreatePlacePinOptions): HT
     options.isPicked ? "ff-pin-picked" : ""
   ].join(" ");
   element.setAttribute("aria-label", place.name);
+  element.setAttribute("data-tooltip", `${place.name} · ${formatClosingTime(place.closingMinutes)}`);
 
   const pinButton = document.createElement("button");
   pinButton.type = "button";
@@ -29,7 +30,20 @@ export function createPlacePin(place: Place, options: CreatePlacePinOptions): HT
     tone === "green" ? "ff-pin-green" : "ff-pin-yellow"
   ].join(" ");
 
-  image.innerHTML = categoryIcon(place.type);
+  const logoUrl = getLogoUrl(place);
+  if (logoUrl) {
+    const img = document.createElement("img");
+    img.src = logoUrl;
+    img.className = "ff-pin-logo";
+    img.alt = "";
+    img.addEventListener("error", () => {
+      img.remove();
+      image.innerHTML = categoryIcon(place.type);
+    });
+    image.appendChild(img);
+  } else {
+    image.innerHTML = categoryIcon(place.type);
+  }
 
   const heart = document.createElement("button");
   heart.type = "button";
@@ -51,6 +65,17 @@ export function createPlacePin(place: Place, options: CreatePlacePinOptions): HT
   pinButton.append(image, label);
   element.append(pinButton, heart);
   return element;
+}
+
+function getLogoUrl(place: Place): string | null {
+  const website = place.tags?.website;
+  if (!website) return null;
+  try {
+    const { hostname } = new URL(website.startsWith("http") ? website : `https://${website}`);
+    return `https://logo.clearbit.com/${hostname}`;
+  } catch {
+    return null;
+  }
 }
 
 function categoryIcon(type: Place["type"]) {
