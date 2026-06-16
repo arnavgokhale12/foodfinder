@@ -95,6 +95,18 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [toastMessage]);
 
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      if (e.key === "p" || e.key === "P") handlePickForMe();
+      else if (e.key === "l" || e.key === "L") setViewMode((m) => (m === "map" ? "list" : "map"));
+      else if (e.key === "Escape") setSelectedPlace(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handlePickForMe]);
+
   const showCuisineFilters = filter === "restaurant" && cuisineOptions.length > 0;
   const hasEmptyPlaces = !isLoading && canShowPlaces && (bounds || filter === "saved") && visiblePlaces.length === 0;
   const emptyCopy = filter === "saved" ? "Nothing saved yet." : "Nothing open here right now";

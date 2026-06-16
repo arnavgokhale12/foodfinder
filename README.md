@@ -6,20 +6,34 @@ FoodFinder is a mobile-first map app for finding restaurants, bars, and coffee s
 
 ## Links
 
-- GitHub: https://github.com/arnavgokhale12/foodfinder
-- Frontend: coming soon
-- API: coming soon
+- **Live**: https://foodfinder-client.vercel.app
+- **GitHub**: https://github.com/arnavgokhale12/foodfinder
 
 ## Features
 
 - Shows only currently open restaurants, bars, and cafes
-- Filters for all places, restaurants, bars, coffee, and late night
+- Filters for all places, restaurants, bars, coffee, late night, vegan, vegetarian
+- Cuisine sub-filters dynamically generated per viewport
 - Viewport-driven results with a zoom gate to protect the Overpass API
 - Open/closing-soon visual states with green/yellow pin rings
+- Pin hover tooltip showing name + closing time
+- Restaurant logos via Clearbit (falls back to category icon)
 - OSRM drive-time estimates on pins and detail sheets
 - Opening-hours parsing from OpenStreetMap `opening_hours` tags
+- List view sortable by distance or closing time
+- Pick for me — random selection from visible open places
+- Saved places persisted to localStorage
+- Re-center button to fly back to your GPS position
 - Installable PWA with manifest, icons, and service worker
 - Mobile safe-area handling for notch and home-bar layouts
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `P` | Pick for me |
+| `L` | Toggle list / map view |
+| `Esc` | Close detail sheet |
 
 ## Tech Stack
 
