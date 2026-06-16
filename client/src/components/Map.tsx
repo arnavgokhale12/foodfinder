@@ -44,6 +44,7 @@ export function Map({
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<MapLibreMarker[]>([]);
   const userMarkerRef = useRef<MapLibreMarker | null>(null);
+  const initCenterRef = useRef<[number, number]>([userLocation.lng, userLocation.lat]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current || !hasMapTilerKey || !window.maplibregl) {
@@ -52,7 +53,7 @@ export function Map({
 
     const maplibregl = window.maplibregl;
     const map = new maplibregl.Map({
-      center: [userLocation.lng, userLocation.lat],
+      center: initCenterRef.current,
       container: containerRef.current,
       style: mapStyle,
       zoom: 13
@@ -94,7 +95,7 @@ export function Map({
       mapRef.current = null;
       userMarkerRef.current = null;
     };
-  }, [onBoundsChange, onZoomGateChange, userLocation.lat, userLocation.lng]);
+  }, [onBoundsChange, onZoomGateChange]);
 
   useEffect(() => {
     const map = mapRef.current;
