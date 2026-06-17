@@ -1,5 +1,5 @@
 import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Bounds, Coordinates, Place } from "../types";
 import { createPlacePin } from "./PlacePin";
 
@@ -63,6 +63,7 @@ export function Map({
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<MapLibreMarker[]>([]);
   const userMarkerRef = useRef<MapLibreMarker | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   const initCenterRef = useRef<[number, number]>([userLocation.lng, userLocation.lat]);
   // Always up-to-date ref so the load handler can read the current location
   // without being a dep of the init effect.
@@ -84,6 +85,7 @@ export function Map({
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
     mapRef.current = map;
+    setMapReady(true);
 
     const emitBounds = () => {
       const isZoomedIn = map.getZoom() >= MIN_FETCH_ZOOM;
@@ -126,6 +128,7 @@ export function Map({
       map.remove();
       mapRef.current = null;
       userMarkerRef.current = null;
+      setMapReady(false);
     };
   }, [onBoundsChange, onZoomGateChange]);
 
@@ -201,7 +204,7 @@ export function Map({
     } else {
       userMarkerRef.current.setLngLat([userLocation.lng, userLocation.lat]);
     }
-  }, [showUserLocation, userLocation.lat, userLocation.lng]);
+  }, [mapReady, showUserLocation, userLocation.lat, userLocation.lng]);
 
   useEffect(() => {
     const map = mapRef.current;
