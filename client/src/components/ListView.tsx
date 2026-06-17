@@ -3,6 +3,7 @@ import {
   categoryLabel,
   formatClosingTime,
   formatTravelTime,
+  isOpenLate,
   pinToneForClosingMinutes,
   titleCaseCuisine
 } from "../utils/timeUtils";
@@ -68,6 +69,9 @@ export function ListView({ places, sortMode, travelMode, onSortChange, onPlaceSe
                   <span className={tone === "yellow" ? "text-xs font-black text-yellow-300" : tone === "grey" ? "text-xs font-bold text-white/35" : "text-xs font-bold text-lime-300"}>
                     {formatClosingTime(place.closingMinutes, place.hoursKnown)}
                   </span>
+                  {isOpenLate(place.closingMinutes, place.hoursKnown) ? (
+                    <span className="mt-0.5 block text-xs font-black text-indigo-300">Open Late</span>
+                  ) : null}
                 </span>
               </button>
             );

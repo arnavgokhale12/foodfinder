@@ -320,7 +320,7 @@ export default function App() {
 }
 
 function getServerFilter(filter: PlaceType): ServerPlaceType {
-  if (filter === "vegan" || filter === "vegetarian" || filter === "saved" || filter === "last-call" || filter === "outdoor") {
+  if (filter === "vegan" || filter === "vegetarian" || filter === "saved" || filter === "last-call" || filter === "happy-hour" || filter === "outdoor") {
     return "all";
   }
 
@@ -338,6 +338,10 @@ function applyClientFilters(places: Place[], filter: PlaceType, cuisineFilter: s
     }
 
     if (filter === "last-call" && !(place.closingMinutes !== null && place.closingMinutes <= 30)) {
+      return false;
+    }
+
+    if (filter === "happy-hour" && !place.isHappyHour) {
       return false;
     }
 

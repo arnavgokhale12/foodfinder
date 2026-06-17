@@ -106,6 +106,12 @@ export function titleCaseCuisine(cuisine: string): string {
     .join(", ");
 }
 
+export function isOpenLate(closingMinutes: Place["closingMinutes"], hoursKnown = true): boolean {
+  if (!hoursKnown) return false;
+  if (closingMinutes === null) return true;
+  return closingMinutes >= 240;
+}
+
 export function closingMinutesFromOpeningPeriods(periods?: OpeningPeriod[]): number | null | undefined {
   if (!periods?.length) {
     return undefined;

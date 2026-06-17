@@ -1,6 +1,6 @@
-export type PlaceType = "all" | "restaurant" | "bar" | "cafe" | "late-night" | "last-call" | "outdoor" | "vegan" | "vegetarian" | "saved";
+export type PlaceType = "all" | "restaurant" | "bar" | "cafe" | "late-night" | "last-call" | "happy-hour" | "outdoor" | "vegan" | "vegetarian" | "saved";
 
-export type ServerPlaceType = Exclude<PlaceType, "vegan" | "vegetarian" | "saved" | "last-call" | "outdoor">;
+export type ServerPlaceType = Exclude<PlaceType, "vegan" | "vegetarian" | "saved" | "last-call" | "happy-hour" | "outdoor">;
 
 export type PinTone = "green" | "yellow" | "grey";
 

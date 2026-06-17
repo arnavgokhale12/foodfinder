@@ -45,7 +45,13 @@ const DETAIL_TAG_KEYS = [
   "takeaway",
   "delivery",
   "wheelchair",
-  "website"
+  "website",
+  "internet_access",
+  "payment:contactless",
+  "payment:cash_only",
+  "microbrewery",
+  "reservation",
+  "stars"
 ] as const;
 const AMENITIES_BY_TYPE: Record<PlaceType, Amenity[]> = {
   all: ["restaurant", "bar", "cafe"],

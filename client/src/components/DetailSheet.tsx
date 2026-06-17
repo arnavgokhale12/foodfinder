@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import type { Place } from "../types";
-import { categoryLabel, formatClosingTime, formatDistance, formatTravelTime, pinToneForClosingMinutes } from "../utils/timeUtils";
+import { categoryLabel, formatClosingTime, formatDistance, formatTravelTime, isOpenLate, pinToneForClosingMinutes } from "../utils/timeUtils";
 
 interface DetailSheetProps {
   place: Place | null;
@@ -12,10 +13,17 @@ interface DetailSheetProps {
 
 export function DetailSheet({ place, isSaved, travelMode, onClose, onShareResult, onToggleSaved }: DetailSheetProps) {
   const tone = place ? pinToneForClosingMinutes(place.closingMinutes, place.hoursKnown) : "green";
+
+  useEffect(() => {
+    if (!place?.id || !("wakeLock" in navigator)) return;
+    let lock: WakeLockSentinel | null = null;
+    navigator.wakeLock.request("screen").then((l) => { lock = l; }).catch(() => {});
+    return () => { lock?.release().catch(() => {}); };
+  }, [place?.id]);
   const directionsUrl = place
     ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${place.lat},${place.lng}`)}`
     : "#";
-  const tagBadges = place ? getTagBadges(place.tags) : [];
+  const tagBadges = place ? getTagBadges(place.tags, place.closingMinutes, place.hoursKnown) : [];
 
   async function handleShare() {
     if (!place) {
@@ -146,27 +154,28 @@ export function DetailSheet({ place, isSaved, travelMode, onClose, onShareResult
   );
 }
 
-function getTagBadges(tags?: Record<string, string>) {
-  if (!tags) {
-    return [];
-  }
-
+function getTagBadges(tags?: Record<string, string>, closingMinutes?: Place["closingMinutes"], hoursKnown?: boolean) {
   const badges: string[] = [];
-  if (tags.outdoor_seating === "yes") {
-    badges.push("Outdoor seating");
-  }
-  if (tags.takeaway === "yes") {
-    badges.push("Takeout");
-  }
-  if (tags["diet:vegetarian"] === "yes") {
-    badges.push("Vegetarian");
-  }
-  if (tags["diet:vegan"] === "yes") {
-    badges.push("Vegan");
-  }
-  if (tags.wheelchair === "yes") {
-    badges.push("Accessible");
-  }
+
+  if (isOpenLate(closingMinutes ?? null, hoursKnown)) badges.push("Open Late");
+  if (!tags) return badges;
+
+  if (tags.outdoor_seating === "yes") badges.push("Outdoor seating");
+  if (tags.takeaway === "yes") badges.push("Takeout");
+  if (tags.delivery === "yes") badges.push("Delivery");
+  if (tags["diet:vegetarian"] === "yes") badges.push("Vegetarian options");
+  if (tags["diet:vegan"] === "yes") badges.push("Vegan options");
+  if (tags["diet:gluten_free"] === "yes") badges.push("Gluten-free options");
+  if (tags.wheelchair === "yes") badges.push("Accessible");
+  if (tags.internet_access === "wlan" || tags.internet_access === "yes") badges.push("Wi-Fi");
+  if (tags["payment:contactless"] === "yes") badges.push("Contactless");
+  if (tags["payment:cash_only"] === "yes") badges.push("Cash only");
+  if (tags.microbrewery === "yes") badges.push("Microbrewery");
+  const stars = parseInt(tags.stars ?? "");
+  if (!isNaN(stars) && stars > 0) badges.push(`${stars}★`);
+  const reservation = tags.reservation;
+  if (reservation === "required") badges.push("Reservations required");
+  else if (reservation === "yes" || reservation === "recommended") badges.push("Reservations");
 
   return badges;
 }
