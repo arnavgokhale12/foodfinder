@@ -5,7 +5,8 @@ export interface OpeningPeriod {
   close?: { day?: number; hour?: number; minute?: number };
 }
 
-export function pinToneForClosingMinutes(closingMinutes: Place["closingMinutes"]): PinTone {
+export function pinToneForClosingMinutes(closingMinutes: Place["closingMinutes"], hoursKnown = true): PinTone {
+  if (!hoursKnown) return "grey";
   if (closingMinutes === null || closingMinutes > 60) {
     return "green";
   }
@@ -13,7 +14,11 @@ export function pinToneForClosingMinutes(closingMinutes: Place["closingMinutes"]
   return "yellow";
 }
 
-export function formatClosingTime(closingMinutes: Place["closingMinutes"]): string {
+export function formatClosingTime(closingMinutes: Place["closingMinutes"], hoursKnown = true): string {
+  if (!hoursKnown) {
+    return "Hours not listed";
+  }
+
   if (closingMinutes === null) {
     return "Open 24 hours";
   }

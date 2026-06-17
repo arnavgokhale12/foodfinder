@@ -2,7 +2,7 @@ export type PlaceType = "all" | "restaurant" | "bar" | "cafe" | "late-night" | "
 
 export type ServerPlaceType = Exclude<PlaceType, "vegan" | "vegetarian" | "saved" | "last-call" | "outdoor">;
 
-export type PinTone = "green" | "yellow";
+export type PinTone = "green" | "yellow" | "grey";
 
 export interface Coordinates {
   lat: number;
@@ -31,4 +31,5 @@ export interface Place {
   type: "restaurant" | "bar" | "cafe" | "place";
   tags?: Record<string, string>;
   isHappyHour?: boolean;
+  hoursKnown?: boolean;
 }

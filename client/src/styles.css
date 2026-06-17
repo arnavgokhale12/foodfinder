@@ -137,6 +137,10 @@ body {
   border-color: #06b6d4;
 }
 
+.ff-pin-unknown::after {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .ff-pin-heart {
   align-items: center;
   background: rgba(3, 4, 6, 0.78);

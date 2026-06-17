@@ -46,7 +46,7 @@ export function ListView({ places, sortMode, travelMode, onSortChange, onPlaceSe
 
         <div className="space-y-2">
           {sortedPlaces.map((place) => {
-            const tone = pinToneForClosingMinutes(place.closingMinutes);
+            const tone = pinToneForClosingMinutes(place.closingMinutes, place.hoursKnown);
 
             return (
               <button
@@ -65,8 +65,8 @@ export function ListView({ places, sortMode, travelMode, onSortChange, onPlaceSe
                 </span>
                 <span className="shrink-0 text-right">
                   <span className="block text-sm font-black text-white">{formatTravelTime(place.driveMinutes, travelMode)}</span>
-                  <span className={tone === "yellow" ? "text-xs font-black text-yellow-300" : "text-xs font-bold text-lime-300"}>
-                    {formatClosingTime(place.closingMinutes)}
+                  <span className={tone === "yellow" ? "text-xs font-black text-yellow-300" : tone === "grey" ? "text-xs font-bold text-white/35" : "text-xs font-bold text-lime-300"}>
+                    {formatClosingTime(place.closingMinutes, place.hoursKnown)}
                   </span>
                 </span>
               </button>

@@ -10,7 +10,7 @@ interface CreatePlacePinOptions {
 }
 
 export function createPlacePin(place: Place, options: CreatePlacePinOptions): HTMLDivElement {
-  const tone = pinToneForClosingMinutes(place.closingMinutes);
+  const tone = pinToneForClosingMinutes(place.closingMinutes, place.hoursKnown);
   const element = document.createElement("div");
   element.className = [
     "group ff-pin-shell flex -translate-x-1/2 -translate-y-1/2 flex-col items-center",
@@ -18,7 +18,7 @@ export function createPlacePin(place: Place, options: CreatePlacePinOptions): HT
   ].join(" ");
   element.setAttribute("aria-label", place.name);
   const hhLabel = place.isHappyHour ? " · Happy Hour" : "";
-  element.setAttribute("data-tooltip", `${place.name}${hhLabel} · ${formatClosingTime(place.closingMinutes)}`);
+  element.setAttribute("data-tooltip", `${place.name}${hhLabel} · ${formatClosingTime(place.closingMinutes, place.hoursKnown)}`);
 
   const pinButton = document.createElement("button");
   pinButton.type = "button";
@@ -26,7 +26,7 @@ export function createPlacePin(place: Place, options: CreatePlacePinOptions): HT
   pinButton.addEventListener("click", () => options.onSelect(place));
 
   const image = document.createElement("span");
-  const ringClass = tone === "yellow" ? "ff-pin-yellow" : place.isHappyHour ? "ff-pin-happy" : "";
+  const ringClass = tone === "grey" ? "ff-pin-unknown" : tone === "yellow" ? "ff-pin-yellow" : place.isHappyHour ? "ff-pin-happy" : "";
   image.className = [
     "ff-pin-token transition duration-200 group-hover:scale-105",
     `ff-pin-${place.type}`,

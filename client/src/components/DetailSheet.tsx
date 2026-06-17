@@ -11,7 +11,7 @@ interface DetailSheetProps {
 }
 
 export function DetailSheet({ place, isSaved, travelMode, onClose, onShareResult, onToggleSaved }: DetailSheetProps) {
-  const tone = place ? pinToneForClosingMinutes(place.closingMinutes) : "green";
+  const tone = place ? pinToneForClosingMinutes(place.closingMinutes, place.hoursKnown) : "green";
   const directionsUrl = place
     ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${place.lat},${place.lng}`)}`
     : "#";
@@ -57,7 +57,7 @@ export function DetailSheet({ place, isSaved, travelMode, onClose, onShareResult
         {place ? (
           <div className="space-y-4">
             <div className="mx-auto h-1.5 w-12 rounded-full bg-white/20" />
-            <ClosingStatus closingMinutes={place.closingMinutes} />
+            <ClosingStatus closingMinutes={place.closingMinutes} hoursKnown={place.hoursKnown} />
             {place.isHappyHour ? (
               <div className="rounded-2xl border border-amber-300/40 bg-amber-300/15 px-4 py-3 text-sm font-black text-amber-100">
                 Happy hour is on right now
@@ -90,7 +90,7 @@ export function DetailSheet({ place, isSaved, travelMode, onClose, onShareResult
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <InfoCard label="Hours" tone={tone} value={formatClosingTime(place.closingMinutes)} />
+              <InfoCard label="Hours" tone={place.hoursKnown === false ? undefined : tone} value={formatClosingTime(place.closingMinutes, place.hoursKnown)} />
               <InfoCard label={travelMode === "walk" ? "Walk" : "Drive"} value={formatTravelTime(place.driveMinutes, travelMode)} />
               <InfoCard label="Source" value="OpenStreetMap" />
             </div>
@@ -171,8 +171,8 @@ function getTagBadges(tags?: Record<string, string>) {
   return badges;
 }
 
-function ClosingStatus({ closingMinutes }: { closingMinutes: Place["closingMinutes"] }) {
-  if (closingMinutes === null || closingMinutes > 60) {
+function ClosingStatus({ closingMinutes, hoursKnown }: { closingMinutes: Place["closingMinutes"]; hoursKnown?: boolean }) {
+  if (!hoursKnown || closingMinutes === null || closingMinutes > 60) {
     return null;
   }
 
@@ -188,7 +188,7 @@ function ClosingStatus({ closingMinutes }: { closingMinutes: Place["closingMinut
   );
 }
 
-function InfoCard({ label, value, tone }: { label: string; value: string; tone?: "green" | "yellow" }) {
+function InfoCard({ label, value, tone }: { label: string; value: string; tone?: "green" | "yellow" | "grey" }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-white/45">{label}</p>

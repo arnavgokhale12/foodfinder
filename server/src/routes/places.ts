@@ -6,8 +6,10 @@ type Amenity = "restaurant" | "bar" | "cafe";
 
 interface OverpassElement {
   id?: number;
+  type?: "node" | "way" | "relation";
   lat?: number;
   lon?: number;
+  center?: { lat: number; lon: number };
   tags?: Record<string, string | undefined>;
 }
 
@@ -18,7 +20,8 @@ interface CleanPlace {
   lng: number;
   photo: null;
   rating: null;
-  closingMinutes: number;
+  closingMinutes: number | null;
+  hoursKnown: boolean;
   driveMinutes: number | null;
   distanceKm: number;
   address: string | null;
@@ -31,7 +34,8 @@ interface CleanPlace {
 const router = Router();
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 const OSRM_BASE_URL = "https://router.project-osrm.org/table/v1";
-const MAX_RESULTS = 40;
+const OVERPASS_LIMIT = 150;
+const MAX_RESULTS = 50;
 const DETAIL_TAG_KEYS = [
   "cuisine",
   "diet:vegan",
@@ -62,7 +66,7 @@ router.get("/", async (request, response) => {
     const elements = await fetchPlaces(parsed.value);
     const places = elements
       .flatMap((element) => cleanPlace(element, parsed.value.userLat, parsed.value.userLng))
-      .filter((place) => (parsed.value.type === "late-night" ? place.closingMinutes >= minutesUntilMidnight() : true))
+      .filter((place) => (parsed.value.type === "late-night" ? place.closingMinutes !== null && place.closingMinutes >= minutesUntilMidnight() : true))
       .sort((a, b) => a.distanceKm - b.distanceKm)
       .slice(0, MAX_RESULTS);
     const placesWithDriveTimes = await attachDriveTimes(places, parsed.value.userLat, parsed.value.userLng, parsed.value.mode);
@@ -119,31 +123,44 @@ async function fetchPlaces(params: { north: number; south: number; east: number;
 
 function buildOverpassQuery(params: { north: number; south: number; east: number; west: number; type: PlaceType }) {
   const bbox = `${params.south},${params.west},${params.north},${params.east}`;
-  const nodeQueries = AMENITIES_BY_TYPE[params.type]
-    .map((amenity) => `  node["amenity"="${amenity}"]["opening_hours"](${bbox});`)
+  const queries = AMENITIES_BY_TYPE[params.type]
+    .flatMap((amenity) => [
+      `  node["amenity"="${amenity}"]["name"](${bbox});`,
+      `  way["amenity"="${amenity}"]["name"](${bbox});`
+    ])
     .join("\n");
 
-  return `[out:json][timeout:20];
+  return `[out:json][timeout:25];
 (
-${nodeQueries}
+${queries}
 );
-out body ${MAX_RESULTS};`;
+out center ${OVERPASS_LIMIT};`;
 }
 
 function cleanPlace(element: OverpassElement, userLat: number, userLng: number): CleanPlace[] {
   const tags = element.tags ?? {};
-  const lat = element.lat;
-  const lng = element.lon;
+  const lat = element.lat ?? element.center?.lat;
+  const lng = element.lon ?? element.center?.lon;
   const id = element.id;
   const amenity = tags.amenity;
 
-  if (!id || !Number.isFinite(lat) || !Number.isFinite(lng) || !isAmenity(amenity) || !tags.opening_hours) {
+  if (!id || !Number.isFinite(lat) || !Number.isFinite(lng) || !isAmenity(amenity)) {
     return [];
   }
 
-  const closingMinutes = getClosingMinutes(tags.opening_hours);
-  if (closingMinutes === undefined || closingMinutes <= 0) {
-    return [];
+  let closingMinutes: number | null = null;
+  let hoursKnown = false;
+
+  if (tags.opening_hours) {
+    const parsed = getClosingMinutes(tags.opening_hours);
+    if (parsed === undefined) {
+      hoursKnown = false;
+    } else if (parsed <= 0) {
+      return [];
+    } else {
+      closingMinutes = parsed;
+      hoursKnown = true;
+    }
   }
 
   return [
@@ -160,6 +177,7 @@ function cleanPlace(element: OverpassElement, userLat: number, userLng: number):
       type: amenity,
       tags: pickDetailTags(tags),
       closingMinutes,
+      hoursKnown,
       distanceKm: haversineKm(userLat, userLng, lat!, lng!),
       isHappyHour: getHappyHourState(tags.happy_hours)
     }
