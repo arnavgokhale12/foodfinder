@@ -15,6 +15,11 @@ interface SearchTarget {
   seq: number;
 }
 
+interface EasyFindTarget {
+  coords: Array<[number, number]>;
+  seq: number;
+}
+
 interface MapProps {
   places: Place[];
   showUserLocation: boolean;
@@ -24,6 +29,7 @@ interface MapProps {
   recenterTrigger: number;
   savedPlaceIds: string[];
   searchTarget: SearchTarget | null;
+  easyFindTarget: EasyFindTarget | null;
   travelMode: "drive" | "walk";
   onBoundsChange: (bounds: Bounds | null) => void;
   onPlaceSelect: (place: Place) => void;
@@ -46,6 +52,7 @@ export function Map({
   recenterTrigger,
   savedPlaceIds,
   searchTarget,
+  easyFindTarget,
   travelMode,
   onBoundsChange,
   onPlaceSelect,
@@ -158,6 +165,20 @@ export function Map({
       map.flyTo({ center: [searchTarget.lng, searchTarget.lat], essential: true, zoom: 14 });
     } catch { /* ignore */ }
   }, [searchTarget]);
+
+  useEffect(() => {
+    if (!easyFindTarget) return;
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    const lngs = easyFindTarget.coords.map((c) => c[0]);
+    const lats = easyFindTarget.coords.map((c) => c[1]);
+    try {
+      map.fitBounds(
+        [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
+        { padding: { top: 80, bottom: 320, left: 60, right: 60 }, maxZoom: 15, essential: true }
+      );
+    } catch { /* ignore */ }
+  }, [easyFindTarget]);
 
   useEffect(() => {
     const map = mapRef.current;

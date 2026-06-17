@@ -28,6 +28,7 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTarget, setSearchTarget] = useState<{ lat: number; lng: number; seq: number } | null>(null);
   const [travelMode, setTravelMode] = useState<"drive" | "walk">("drive");
+  const [easyFindTarget, setEasyFindTarget] = useState<{ coords: Array<[number, number]>; seq: number } | null>(null);
 
   const handleSearchSelect = useCallback((result: GeoResult) => {
     setSearchTarget({ lat: result.lat, lng: result.lng, seq: Date.now() });
@@ -91,6 +92,26 @@ export default function App() {
     window.setTimeout(() => setPickedPlaceId(null), 1400);
   }, [visiblePlaces]);
 
+  const handleEasyFind = useCallback(() => {
+    if (!visiblePlaces.length) {
+      setToastMessage("No open places in view — zoom in or pan to your location.");
+      return;
+    }
+
+    const nearest = [...visiblePlaces]
+      .sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999))
+      .slice(0, 5);
+
+    setViewMode("map");
+    setSelectedPlace(nearest[0]);
+
+    const coords: Array<[number, number]> = [
+      [location.lng, location.lat],
+      ...nearest.map((p) => [p.lng, p.lat] as [number, number])
+    ];
+    setEasyFindTarget({ coords, seq: Date.now() });
+  }, [visiblePlaces, location]);
+
   const handleToast = useCallback((message: string) => {
     setToastMessage(message);
   }, []);
@@ -125,6 +146,7 @@ export default function App() {
     <main className="relative h-screen overflow-hidden bg-black">
       {viewMode === "map" ? (
         <Map
+          easyFindTarget={easyFindTarget}
           focusedPlace={focusedPlace}
           onBoundsChange={setBounds}
           onPlaceSelect={setSelectedPlace}
@@ -210,13 +232,22 @@ export default function App() {
       ) : null}
 
       {viewMode === "map" && !selectedPlace ? (
-        <button
-          className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] z-20 mx-auto w-max rounded-full border border-lime-200/25 bg-lime-300 px-5 py-3 text-sm font-black text-black shadow-2xl transition hover:bg-lime-200"
-          onClick={handlePickForMe}
-          type="button"
-        >
-          Pick for me
-        </button>
+        <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] z-20 flex justify-center gap-2 px-4">
+          <button
+            className="rounded-full border border-white/15 bg-white px-5 py-3 text-sm font-black text-black shadow-2xl transition hover:bg-white/90"
+            onClick={handleEasyFind}
+            type="button"
+          >
+            Easy Find
+          </button>
+          <button
+            className="rounded-full border border-lime-200/25 bg-lime-300 px-5 py-3 text-sm font-black text-black shadow-2xl transition hover:bg-lime-200"
+            onClick={handlePickForMe}
+            type="button"
+          >
+            Pick for me
+          </button>
+        </div>
       ) : null}
 
       <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] left-4 z-20 flex flex-col items-start gap-2">
