@@ -36,6 +36,7 @@ const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 const OSRM_BASE_URL = "https://router.project-osrm.org/table/v1";
 const OVERPASS_LIMIT = 150;
 const MAX_RESULTS = 50;
+const MAX_BBOX_DEGREES = 0.5; // ~55 km — reject oversized requests
 
 const OVERPASS_CACHE_TTL = 5 * 60 * 1000;
 const OVERPASS_CACHE_MAX = 100;
@@ -111,6 +112,10 @@ function parseQuery(query: Record<string, unknown>):
 
   if (!["all", "restaurant", "bar", "cafe", "late-night"].includes(type)) {
     return { ok: false, error: "Invalid place type" };
+  }
+
+  if (north - south > MAX_BBOX_DEGREES || east - west > MAX_BBOX_DEGREES) {
+    return { ok: false, error: "Requested area too large" };
   }
 
   return { ok: true, value: { north, south, east, west, type, userLat, userLng, mode } };
@@ -194,7 +199,7 @@ function cleanPlace(element: OverpassElement, userLat: number, userLng: number):
 
   return [
     {
-      id: String(id),
+      id: `${element.type ?? "node"}/${id}`,
       name: tags.name ?? "Unnamed",
       lat: lat!,
       lng: lng!,

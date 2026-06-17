@@ -22,6 +22,7 @@ export function SearchBar({ onClose, onSelect }: SearchBarProps) {
   const [results, setResults] = useState<GeoResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -35,11 +36,16 @@ export function SearchBar({ onClose, onSelect }: SearchBarProps) {
     }
 
     const timer = window.setTimeout(async () => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setIsLoading(true);
       try {
         const params = new URLSearchParams({ format: "json", q, limit: "6", addressdetails: "0" });
         const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
-          headers: { "Accept-Language": "en" }
+          headers: { "Accept-Language": "en" },
+          signal: controller.signal
         });
         const data = (await res.json()) as NominatimResult[];
         setResults(
@@ -53,14 +59,17 @@ export function SearchBar({ onClose, onSelect }: SearchBarProps) {
             lng: parseFloat(r.lon),
           }))
         );
-      } catch {
-        setResults([]);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") setResults([]);
       } finally {
         setIsLoading(false);
       }
     }, 400);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      abortRef.current?.abort();
+    };
   }, [query]);
 
   useEffect(() => {

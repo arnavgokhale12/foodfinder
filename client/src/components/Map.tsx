@@ -332,9 +332,9 @@ export function Map({
             <div className="relative h-4 w-4 rounded-full bg-lime-300 shadow-[0_0_34px_rgba(190,242,100,0.72)]" />
           </div>
           <p className="text-sm font-black uppercase tracking-[0.32em] text-lime-200/80">FoodFinder</p>
-          <h1 className="mt-4 text-4xl font-black tracking-tight text-white sm:text-5xl">Loading map...</h1>
+          <h1 className="mt-4 text-4xl font-black tracking-tight text-white sm:text-5xl">Map not configured</h1>
           <p className="mt-4 max-w-sm text-sm leading-6 text-white/55">
-            Finding nearby places that are confirmed open right now.
+            A MapTiler API key is required. Set <code className="rounded bg-white/10 px-1 font-mono text-white/80">VITE_MAPTILER_KEY</code> and redeploy.
           </p>
         </div>
       </div>

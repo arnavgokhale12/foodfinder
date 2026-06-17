@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Place } from "../types";
 import { categoryLabel, formatClosingTime, formatDistance, formatTravelTime, isOpenLate, pinToneForClosingMinutes } from "../utils/timeUtils";
 
@@ -11,35 +11,47 @@ interface DetailSheetProps {
   onToggleSaved: (place: Place) => void;
 }
 
+function normalizeUrl(url: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  return `https://${url}`;
+}
+
 export function DetailSheet({ place, isSaved, travelMode, onClose, onShareResult, onToggleSaved }: DetailSheetProps) {
   const tone = place ? pinToneForClosingMinutes(place.closingMinutes, place.hoursKnown) : "green";
+  const [wakeLockActive, setWakeLockActive] = useState(false);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
 
-  useEffect(() => {
-    if (!place?.id || !("wakeLock" in navigator)) return;
-    let lock: WakeLockSentinel | null = null;
-    navigator.wakeLock.request("screen").then((l) => { lock = l; }).catch(() => {});
-    return () => { lock?.release().catch(() => {}); };
-  }, [place?.id]);
+  const handleWakeLock = useCallback(async () => {
+    if (!("wakeLock" in navigator)) return;
+    if (wakeLockActive) {
+      await wakeLockRef.current?.release().catch(() => {});
+      wakeLockRef.current = null;
+      setWakeLockActive(false);
+    } else {
+      try {
+        const lock = await navigator.wakeLock.request("screen");
+        wakeLockRef.current = lock;
+        setWakeLockActive(true);
+        lock.addEventListener("release", () => {
+          wakeLockRef.current = null;
+          setWakeLockActive(false);
+        });
+      } catch { /* permission denied or not supported */ }
+    }
+  }, [wakeLockActive]);
+
   const directionsUrl = place
     ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${place.lat},${place.lng}`)}`
     : "#";
   const tagBadges = place ? getTagBadges(place.tags, place.closingMinutes, place.hoursKnown) : [];
 
   async function handleShare() {
-    if (!place) {
-      return;
-    }
-
+    if (!place) return;
     try {
       if (navigator.share) {
-        await navigator.share({
-          title: place.name,
-          text: `${place.name} is open now on FoodFinder.`,
-          url: directionsUrl
-        });
+        await navigator.share({ title: place.name, text: `${place.name} is open now on FoodFinder.`, url: directionsUrl });
         return;
       }
-
       await navigator.clipboard.writeText(directionsUrl);
       onShareResult("Map link copied");
     } catch {
@@ -131,7 +143,7 @@ export function DetailSheet({ place, isSaved, travelMode, onClose, onShareResult
               {place.tags?.website ? (
                 <a
                   className="rounded-2xl border border-white/10 bg-white/[0.08] px-5 py-3 text-center text-base font-black text-white transition hover:bg-white/[0.14]"
-                  href={place.tags.website}
+                  href={normalizeUrl(place.tags.website)}
                   rel="noreferrer"
                   target="_blank"
                 >
@@ -146,6 +158,20 @@ export function DetailSheet({ place, isSaved, travelMode, onClose, onShareResult
               >
                 Share
               </button>
+              {"wakeLock" in navigator ? (
+                <button
+                  aria-label={wakeLockActive ? "Allow screen to sleep" : "Keep screen on during navigation"}
+                  className={`rounded-2xl px-4 py-3 text-base font-black transition ${
+                    wakeLockActive
+                      ? "bg-amber-400 text-black"
+                      : "border border-white/10 bg-white/[0.08] text-white hover:bg-white/[0.14]"
+                  }`}
+                  onClick={handleWakeLock}
+                  type="button"
+                >
+                  ☀
+                </button>
+              ) : null}
             </div>
           </div>
         ) : null}

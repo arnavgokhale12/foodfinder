@@ -43,8 +43,11 @@ function withinBbox(vp: Bounds, bbox: Bounds): boolean {
   );
 }
 
-function makeCacheKey(b: Bounds, type: ServerPlaceType, travelMode: string) {
-  return `${b.north},${b.south},${b.east},${b.west},${type},${travelMode}`;
+function makeCacheKey(b: Bounds, type: ServerPlaceType, travelMode: string, userLat: number, userLng: number) {
+  // Quantize user location to ~1 km so minor GPS jitter reuses the cache
+  const uLat = Math.round(userLat * 100) / 100;
+  const uLng = Math.round(userLng * 100) / 100;
+  return `${b.north},${b.south},${b.east},${b.west},${type},${travelMode},${uLat},${uLng}`;
 }
 
 function pruneCache() {
@@ -105,7 +108,7 @@ export function usePlaces({ bounds, enabled, filter, userLocation, travelMode }:
 
     const expanded = expandBounds(bounds);
     const quantized = quantizeBounds(expanded);
-    const cacheKey = makeCacheKey(quantized, filter, travelMode);
+    const cacheKey = makeCacheKey(quantized, filter, travelMode, userLocation.lat, userLocation.lng);
 
     pruneCache();
     const cached = viewportCache.get(cacheKey);
@@ -159,7 +162,6 @@ export function usePlaces({ bounds, enabled, filter, userLocation, travelMode }:
         if (!response.ok) throw new Error(`Places request failed (${response.status})`);
 
         const data = (await response.json()) as { places: Place[] };
-        console.info("FoodFinder places", data.places);
         viewportCache.set(cacheKey, { places: data.places, timestamp: Date.now() });
         lastFetchRef.current = {
           expandedBounds: expanded,

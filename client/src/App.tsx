@@ -51,8 +51,12 @@ export default function App() {
     [basePlaces, cuisineFilter, filter]
   );
   const canShowPlaces = filter === "saved" || isZoomedIn;
-  // Don't gate on isLoading — stale places remain visible during refresh
-  const visiblePlaces = canShowPlaces ? filteredPlaces : [];
+  // All places shown on map (includes grey/unknown-hours pins for context)
+  const allVisiblePlaces = canShowPlaces ? filteredPlaces : [];
+  // Confirmed-open places only — used for count, Easy Find, Pick for me, list
+  const openPlaces = filter === "saved"
+    ? allVisiblePlaces
+    : allVisiblePlaces.filter((p) => p.hoursKnown !== false);
 
   const handleFilterChange = useCallback((nextFilter: PlaceType) => {
     setFilter(nextFilter);
@@ -80,26 +84,26 @@ export default function App() {
   }, []);
 
   const handlePickForMe = useCallback(() => {
-    if (!visiblePlaces.length) {
+    if (!openPlaces.length) {
       setToastMessage("Nothing open here - pan around.");
       return;
     }
 
-    const nextPlace = visiblePlaces[Math.floor(Math.random() * visiblePlaces.length)];
+    const nextPlace = openPlaces[Math.floor(Math.random() * openPlaces.length)];
     setViewMode("map");
     setFocusedPlace(nextPlace);
     setPickedPlaceId(nextPlace.id);
     setSelectedPlace(nextPlace);
     window.setTimeout(() => setPickedPlaceId(null), 1400);
-  }, [visiblePlaces]);
+  }, [openPlaces]);
 
   const handleEasyFind = useCallback(() => {
-    if (!visiblePlaces.length) {
+    if (!openPlaces.length) {
       setToastMessage("No open places in view — zoom in or pan to your location.");
       return;
     }
 
-    const nearest = [...visiblePlaces]
+    const nearest = [...openPlaces]
       .sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999))
       .slice(0, 5);
 
@@ -111,7 +115,7 @@ export default function App() {
       ...nearest.map((p) => [p.lng, p.lat] as [number, number])
     ];
     setEasyFindTarget({ coords, seq: Date.now() });
-  }, [visiblePlaces, location]);
+  }, [openPlaces, location]);
 
   const handleToast = useCallback((message: string) => {
     setToastMessage(message);
@@ -140,7 +144,7 @@ export default function App() {
   }, [handlePickForMe]);
 
   const showCuisineFilters = filter === "restaurant" && cuisineOptions.length > 0;
-  const hasEmptyPlaces = !isLoading && canShowPlaces && (bounds || filter === "saved") && visiblePlaces.length === 0;
+  const hasEmptyPlaces = !isLoading && canShowPlaces && (bounds || filter === "saved") && openPlaces.length === 0;
   const emptyCopy = filter === "saved" ? "Nothing saved yet." : "Nothing open here right now";
 
   return (
@@ -155,7 +159,7 @@ export default function App() {
           onToggleSaved={handleToggleSaved}
           onZoomGateChange={handleZoomGateChange}
           pickedPlaceId={pickedPlaceId}
-          places={visiblePlaces}
+          places={allVisiblePlaces}
           recenterTrigger={recenterKey}
           savedPlaceIds={savedPlaceIds}
           searchTarget={searchTarget}
@@ -167,7 +171,7 @@ export default function App() {
         <ListView
           onPlaceSelect={setSelectedPlace}
           onSortChange={setSortMode}
-          places={visiblePlaces}
+          places={openPlaces}
           sortMode={sortMode}
           travelMode={travelMode}
         />
@@ -225,11 +229,11 @@ export default function App() {
         </div>
       ) : null}
 
-      {isZoomedIn && !isLoading && visiblePlaces.length > 0 && viewMode === "map" ? (
+      {isZoomedIn && !isLoading && openPlaces.length > 0 && viewMode === "map" ? (
         <div className={`pointer-events-none fixed inset-x-0 z-20 flex justify-center transition-[bottom] ${
           selectedPlace ? "bottom-[calc(env(safe-area-inset-bottom)+20rem)]" : "bottom-[calc(env(safe-area-inset-bottom)+1.25rem)]"
         }`}>
-          <StatusPill>{visiblePlaces.length} open nearby</StatusPill>
+          <StatusPill>{openPlaces.length} open nearby</StatusPill>
         </div>
       ) : null}
 
