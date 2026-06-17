@@ -9,24 +9,34 @@ interface CreatePlacePinOptions {
   onToggleSaved: (place: Place) => void;
 }
 
-export function createPlacePin(place: Place, options: CreatePlacePinOptions): HTMLDivElement {
-  const tone = pinToneForClosingMinutes(place.closingMinutes, place.hoursKnown);
+export interface PlacePinHandle {
+  element: HTMLDivElement;
+  update: (place: Place, state: { isPicked: boolean; isSaved: boolean; travelMode: "drive" | "walk" }) => void;
+}
+
+export function createPlacePin(place: Place, options: CreatePlacePinOptions): PlacePinHandle {
+  // Mutable ref so click handlers always dispatch the latest place object (e.g., updated driveMinutes)
+  const placeRef = { current: place };
+
   const element = document.createElement("div");
   element.className = [
     "group ff-pin-shell flex -translate-x-1/2 -translate-y-1/2 flex-col items-center",
     options.isPicked ? "ff-pin-picked" : ""
   ].join(" ");
   element.setAttribute("aria-label", place.name);
+
   const hhLabel = place.isHappyHour ? " · Happy Hour" : "";
   element.setAttribute("data-tooltip", `${place.name}${hhLabel} · ${formatClosingTime(place.closingMinutes, place.hoursKnown)}`);
 
   const pinButton = document.createElement("button");
   pinButton.type = "button";
   pinButton.className = "relative flex flex-col items-center border-0 bg-transparent p-0";
-  pinButton.addEventListener("click", () => options.onSelect(place));
+  pinButton.addEventListener("click", () => options.onSelect(placeRef.current));
+
+  const tone = pinToneForClosingMinutes(place.closingMinutes, place.hoursKnown);
+  const ringClass = tone === "grey" ? "ff-pin-unknown" : tone === "yellow" ? "ff-pin-yellow" : place.isHappyHour ? "ff-pin-happy" : "";
 
   const image = document.createElement("span");
-  const ringClass = tone === "grey" ? "ff-pin-unknown" : tone === "yellow" ? "ff-pin-yellow" : place.isHappyHour ? "ff-pin-happy" : "";
   image.className = [
     "ff-pin-token transition duration-200 group-hover:scale-105",
     `ff-pin-${place.type}`,
@@ -50,15 +60,12 @@ export function createPlacePin(place: Place, options: CreatePlacePinOptions): HT
 
   const heart = document.createElement("button");
   heart.type = "button";
-  heart.className = [
-    "ff-pin-heart",
-    options.isSaved ? "ff-pin-heart-saved" : ""
-  ].join(" ");
+  heart.className = ["ff-pin-heart", options.isSaved ? "ff-pin-heart-saved" : ""].join(" ");
   heart.setAttribute("aria-label", options.isSaved ? `Remove ${place.name} from saved` : `Save ${place.name}`);
   heart.textContent = options.isSaved ? "♥" : "♡";
   heart.addEventListener("click", (event) => {
     event.stopPropagation();
-    options.onToggleSaved(place);
+    options.onToggleSaved(placeRef.current);
   });
 
   const label = document.createElement("span");
@@ -68,7 +75,35 @@ export function createPlacePin(place: Place, options: CreatePlacePinOptions): HT
 
   pinButton.append(image, label);
   element.append(pinButton, heart);
-  return element;
+
+  function update(updatedPlace: Place, { isPicked, isSaved, travelMode }: { isPicked: boolean; isSaved: boolean; travelMode: "drive" | "walk" }) {
+    placeRef.current = updatedPlace;
+
+    element.className = [
+      "group ff-pin-shell flex -translate-x-1/2 -translate-y-1/2 flex-col items-center",
+      isPicked ? "ff-pin-picked" : ""
+    ].join(" ");
+
+    const newTone = pinToneForClosingMinutes(updatedPlace.closingMinutes, updatedPlace.hoursKnown);
+    const newRing = newTone === "grey" ? "ff-pin-unknown" : newTone === "yellow" ? "ff-pin-yellow" : updatedPlace.isHappyHour ? "ff-pin-happy" : "";
+    image.className = [
+      "ff-pin-token transition duration-200 group-hover:scale-105",
+      `ff-pin-${updatedPlace.type}`,
+      newRing
+    ].filter(Boolean).join(" ");
+
+    const hhLbl = updatedPlace.isHappyHour ? " · Happy Hour" : "";
+    element.setAttribute("data-tooltip", `${updatedPlace.name}${hhLbl} · ${formatClosingTime(updatedPlace.closingMinutes, updatedPlace.hoursKnown)}`);
+
+    const ms = travelMode === "walk" ? " walk" : "";
+    label.textContent = updatedPlace.driveMinutes ? `${updatedPlace.driveMinutes} min${ms}` : "-- min";
+
+    heart.className = ["ff-pin-heart", isSaved ? "ff-pin-heart-saved" : ""].join(" ");
+    heart.setAttribute("aria-label", isSaved ? `Remove ${updatedPlace.name} from saved` : `Save ${updatedPlace.name}`);
+    heart.textContent = isSaved ? "♥" : "♡";
+  }
+
+  return { element, update };
 }
 
 function getLogoUrl(place: Place): string | null {

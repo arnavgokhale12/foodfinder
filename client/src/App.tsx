@@ -35,7 +35,7 @@ export default function App() {
   }, []);
   const serverFilter = getServerFilter(filter);
   const shouldFetch = isZoomedIn && filter !== "saved";
-  const { places, isLoading, error, retry } = usePlaces({
+  const { places, isLoading, isRefreshing, error, retry } = usePlaces({
     bounds,
     enabled: shouldFetch,
     filter: serverFilter,
@@ -51,7 +51,8 @@ export default function App() {
     [basePlaces, cuisineFilter, filter]
   );
   const canShowPlaces = filter === "saved" || isZoomedIn;
-  const visiblePlaces = canShowPlaces && !isLoading ? filteredPlaces : [];
+  // Don't gate on isLoading — stale places remain visible during refresh
+  const visiblePlaces = canShowPlaces ? filteredPlaces : [];
 
   const handleFilterChange = useCallback((nextFilter: PlaceType) => {
     setFilter(nextFilter);
@@ -148,6 +149,7 @@ export default function App() {
         <Map
           easyFindTarget={easyFindTarget}
           focusedPlace={focusedPlace}
+          isZoomedIn={isZoomedIn}
           onBoundsChange={setBounds}
           onPlaceSelect={setSelectedPlace}
           onToggleSaved={handleToggleSaved}
@@ -210,7 +212,7 @@ export default function App() {
       ) : null}
 
       <div className="pointer-events-none fixed left-1/2 top-[calc(env(safe-area-inset-top)+5rem)] z-20 -translate-x-1/2">
-        {isLoading && isZoomedIn ? <StatusPill>Updating...</StatusPill> : null}
+        {(isLoading || isRefreshing) && isZoomedIn ? <StatusPill>Updating...</StatusPill> : null}
         {!isZoomedIn ? <StatusPill>Zoom in to see what's open</StatusPill> : null}
       </div>
 

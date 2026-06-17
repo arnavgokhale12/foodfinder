@@ -36,6 +36,15 @@ const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 const OSRM_BASE_URL = "https://router.project-osrm.org/table/v1";
 const OVERPASS_LIMIT = 150;
 const MAX_RESULTS = 50;
+
+const OVERPASS_CACHE_TTL = 5 * 60 * 1000;
+const OVERPASS_CACHE_MAX = 100;
+const overpassCache = new Map<string, { elements: OverpassElement[]; ts: number }>();
+
+function overpassCacheKey(params: { north: number; south: number; east: number; west: number; type: PlaceType }) {
+  const q = (n: number, up: boolean) => Math[up ? "ceil" : "floor"](n * 100) / 100;
+  return `${q(params.north, true)},${q(params.south, false)},${q(params.east, true)},${q(params.west, false)},${params.type}`;
+}
 const DETAIL_TAG_KEYS = [
   "cuisine",
   "diet:vegan",
@@ -108,6 +117,12 @@ function parseQuery(query: Record<string, unknown>):
 }
 
 async function fetchPlaces(params: { north: number; south: number; east: number; west: number; type: PlaceType }) {
+  const key = overpassCacheKey(params);
+  const cached = overpassCache.get(key);
+  if (cached && Date.now() - cached.ts < OVERPASS_CACHE_TTL) {
+    return cached.elements;
+  }
+
   const body = new URLSearchParams({ data: buildOverpassQuery(params) });
   const response = await fetch(OVERPASS_URL, {
     method: "POST",
@@ -124,7 +139,15 @@ async function fetchPlaces(params: { north: number; south: number; east: number;
   }
 
   const data = (await response.json()) as { elements?: OverpassElement[] };
-  return data.elements ?? [];
+  const elements = data.elements ?? [];
+
+  if (overpassCache.size >= OVERPASS_CACHE_MAX) {
+    const oldest = [...overpassCache.entries()].sort(([, a], [, b]) => a.ts - b.ts)[0];
+    overpassCache.delete(oldest[0]);
+  }
+  overpassCache.set(key, { elements, ts: Date.now() });
+
+  return elements;
 }
 
 function buildOverpassQuery(params: { north: number; south: number; east: number; west: number; type: PlaceType }) {

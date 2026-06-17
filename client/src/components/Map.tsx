@@ -1,7 +1,7 @@
-import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
+import type { GeoJSONSource, Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 import type { Bounds, Coordinates, Place } from "../types";
-import { createPlacePin } from "./PlacePin";
+import { createPlacePin, type PlacePinHandle } from "./PlacePin";
 
 declare global {
   interface Window {
@@ -25,6 +25,7 @@ interface MapProps {
   showUserLocation: boolean;
   userLocation: Coordinates;
   focusedPlace: Place | null;
+  isZoomedIn: boolean;
   pickedPlaceId: string | null;
   recenterTrigger: number;
   savedPlaceIds: string[];
@@ -42,12 +43,14 @@ const hasMapTilerKey = Boolean(MAPTILER_KEY && MAPTILER_KEY !== "placeholder");
 const mapStyle = `https://api.maptiler.com/maps/dataviz-dark/style.json?key=${MAPTILER_KEY ?? ""}`;
 
 const MIN_FETCH_ZOOM = 13;
+const CLUSTER_LAYERS = ["ff-cluster-bg", "ff-cluster-count", "ff-cluster-dot"] as const;
 
 export function Map({
   places,
   showUserLocation,
   userLocation,
   focusedPlace,
+  isZoomedIn,
   pickedPlaceId,
   recenterTrigger,
   savedPlaceIds,
@@ -61,12 +64,13 @@ export function Map({
 }: MapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
-  const markersRef = useRef<MapLibreMarker[]>([]);
+  // globalThis.Map avoids shadowing by the exported Map component
+  const markerHandleMapRef = useRef<globalThis.Map<string, { marker: MapLibreMarker; handle: PlacePinHandle }>>(new globalThis.Map());
+  const lastKnownPlacesRef = useRef<Place[]>([]);
   const userMarkerRef = useRef<MapLibreMarker | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const initCenterRef = useRef<[number, number]>([userLocation.lng, userLocation.lat]);
-  // Always up-to-date ref so the load handler can read the current location
-  // without being a dep of the init effect.
+  // Always up-to-date so the load handler can read current location without being a dep of the init effect.
   const userLocationRef = useRef(userLocation);
   userLocationRef.current = userLocation;
 
@@ -88,18 +92,16 @@ export function Map({
     setMapReady(true);
 
     const emitBounds = () => {
-      const isZoomedIn = map.getZoom() >= MIN_FETCH_ZOOM;
-      onZoomGateChange(isZoomedIn);
+      const zoomed = map.getZoom() >= MIN_FETCH_ZOOM;
+      onZoomGateChange(zoomed);
 
-      if (!isZoomedIn) {
+      if (!zoomed) {
         onBoundsChange(null);
         return;
       }
 
       const bounds = map.getBounds();
-      if (!bounds) {
-        return;
-      }
+      if (!bounds) return;
 
       onBoundsChange({
         north: bounds.getNorth(),
@@ -111,19 +113,74 @@ export function Map({
 
     map.on("load", () => {
       emitBounds();
-      // If real location resolved before the style finished loading,
-      // fly there now that the map is ready.
+
+      // Fly to real location if GPS resolved before style loaded.
       const loc = userLocationRef.current;
       const [initLng, initLat] = initCenterRef.current;
       if (loc.lat !== initLat || loc.lng !== initLng) {
         map.flyTo({ center: [loc.lng, loc.lat], essential: true, zoom: 13 });
       }
+
+      // GeoJSON cluster source for low-zoom density view
+      map.addSource("ff-clusters", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+        cluster: true,
+        clusterRadius: 40,
+        clusterMaxZoom: 12
+      });
+
+      map.addLayer({
+        id: "ff-cluster-bg",
+        type: "circle",
+        source: "ff-clusters",
+        filter: ["has", "point_count"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": "#22c55e",
+          "circle-opacity": 0.6,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "rgba(34,197,94,0.25)",
+          "circle-radius": ["step", ["get", "point_count"], 18, 5, 26, 20, 36]
+        }
+      });
+
+      map.addLayer({
+        id: "ff-cluster-count",
+        type: "symbol",
+        source: "ff-clusters",
+        filter: ["has", "point_count"],
+        layout: {
+          visibility: "none",
+          "text-field": "{point_count_abbreviated}",
+          "text-size": 12,
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"]
+        },
+        paint: { "text-color": "#000" }
+      });
+
+      map.addLayer({
+        id: "ff-cluster-dot",
+        type: "circle",
+        source: "ff-clusters",
+        filter: ["!", ["has", "point_count"]],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": "#22c55e",
+          "circle-opacity": 0.55,
+          "circle-radius": 5
+        }
+      });
     });
+
     map.on("moveend", emitBounds);
     map.on("zoomend", emitBounds);
 
     return () => {
-      markersRef.current.forEach((marker) => marker.remove());
+      for (const { marker } of markerHandleMapRef.current.values()) {
+        marker.remove();
+      }
+      markerHandleMapRef.current.clear();
       userMarkerRef.current?.remove();
       map.remove();
       mapRef.current = null;
@@ -132,27 +189,17 @@ export function Map({
     };
   }, [onBoundsChange, onZoomGateChange]);
 
+  // Recenter on user location when it first resolves
   useEffect(() => {
     const map = mapRef.current;
-    // Only fly once the style is loaded — calling flyTo on an unready map
-    // can throw in MapLibre 5.x and crash the React tree in React 19.
-    if (!map || !map.isStyleLoaded()) {
-      return;
-    }
-
+    if (!map || !map.isStyleLoaded()) return;
     try {
-      map.flyTo({
-        center: [userLocation.lng, userLocation.lat],
-        essential: true,
-        zoom: Math.max(map.getZoom(), 13)
-      });
-    } catch {
-      // Silently swallow; the load-handler fallback will center the map.
-    }
+      map.flyTo({ center: [userLocation.lng, userLocation.lat], essential: true, zoom: Math.max(map.getZoom(), 13) });
+    } catch { /* style not loaded yet — load handler will fly */ }
   }, [userLocation.lat, userLocation.lng]);
 
   useEffect(() => {
-    if (recenterTrigger === 0) return; // skip the initial mount value
+    if (recenterTrigger === 0) return;
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
     try {
@@ -185,9 +232,7 @@ export function Map({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !window.maplibregl) {
-      return;
-    }
+    if (!map || !window.maplibregl) return;
 
     if (!showUserLocation) {
       userMarkerRef.current?.remove();
@@ -208,39 +253,72 @@ export function Map({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !focusedPlace) {
-      return;
-    }
-
-    map.flyTo({
-      center: [focusedPlace.lng, focusedPlace.lat],
-      essential: true,
-      zoom: Math.max(map.getZoom(), 15)
-    });
+    if (!map || !focusedPlace) return;
+    map.flyTo({ center: [focusedPlace.lng, focusedPlace.lat], essential: true, zoom: Math.max(map.getZoom(), 15) });
   }, [focusedPlace?.id, focusedPlace?.lat, focusedPlace?.lng]);
 
+  // Marker diff: add new, update existing, remove stale — no wholesale teardown
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !window.maplibregl) {
-      return;
+    if (!map || !window.maplibregl) return;
+
+    const currentIds = new Set(places.map((p) => p.id));
+
+    // Remove markers no longer in the result set
+    for (const [id, { marker }] of markerHandleMapRef.current) {
+      if (!currentIds.has(id)) {
+        marker.remove();
+        markerHandleMapRef.current.delete(id);
+      }
     }
 
-    const maplibregl = window.maplibregl;
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = places.map((place) => {
-      const markerElement = createPlacePin(place, {
+    // Add or update
+    for (const place of places) {
+      const state = {
         isPicked: pickedPlaceId === place.id,
         isSaved: savedPlaceIds.includes(place.id),
-        travelMode,
-        onSelect: onPlaceSelect,
-        onToggleSaved
-      });
+        travelMode
+      };
 
-      return new maplibregl.Marker({ element: markerElement, anchor: "center" })
-        .setLngLat([place.lng, place.lat])
-        .addTo(map);
-    });
+      const existing = markerHandleMapRef.current.get(place.id);
+      if (existing) {
+        existing.handle.update(place, state);
+      } else {
+        const handle = createPlacePin(place, { ...state, onSelect: onPlaceSelect, onToggleSaved });
+        const marker = new window.maplibregl.Marker({ element: handle.element, anchor: "center" })
+          .setLngLat([place.lng, place.lat])
+          .addTo(map);
+        markerHandleMapRef.current.set(place.id, { marker, handle });
+      }
+    }
+
+    // Keep last-known places for the cluster layer (persists when zoomed out)
+    if (places.length > 0) lastKnownPlacesRef.current = places;
+
+    const source = map.isStyleLoaded() ? (map.getSource("ff-clusters") as GeoJSONSource | undefined) : undefined;
+    if (source) {
+      source.setData({
+        type: "FeatureCollection",
+        features: lastKnownPlacesRef.current.map((p) => ({
+          type: "Feature" as const,
+          geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
+          properties: {}
+        }))
+      });
+    }
   }, [onPlaceSelect, onToggleSaved, pickedPlaceId, places, savedPlaceIds, travelMode]);
+
+  // Toggle cluster layer visibility based on zoom level
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    const vis = isZoomedIn ? "none" : "visible";
+    for (const layerId of CLUSTER_LAYERS) {
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, "visibility", vis);
+      }
+    }
+  }, [isZoomedIn, mapReady]);
 
   if (!hasMapTilerKey) {
     return (
